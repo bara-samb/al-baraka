@@ -15,9 +15,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getSurahList, getSurahDetails } from '../services/quranService';
 import { getArabicFontSize, setArabicFontSize } from '../services/settingsService';
+import { playAudioTrack, getAyahStartRatio } from '../services/audioService';
+import { getEffectiveAudioUrl } from '../services/downloadService';
 import { Surah, SurahDetail, Ayah, MushafPageOrientation, TranslationLanguage } from '../types/quran';
 import { ShareVerseModal } from '../components/ShareVerseModal';
 import { SettingsModal } from '../components/SettingsModal';
+import { AudioPlayerBar } from '../components/AudioPlayerBar';
 
 // Point de départ réel (sourate, verset) de chacun des 30 Juz' du Coran
 const JUZ_START_POINTS: Array<{ surah: number; ayah: number }> = [
@@ -78,6 +81,7 @@ export const MushafScreen: React.FC = () => {
 
   const [selectedAyah, setSelectedAyah] = useState<Ayah | null>(null);
   const [shareModalVisible, setShareModalVisible] = useState<boolean>(false);
+  const [playbackTitle, setPlaybackTitle] = useState<string | null>(null);
 
   const ayahListRef = useRef<FlatList>(null);
   const pendingScrollAyahRef = useRef<number | null>(null);
@@ -166,6 +170,25 @@ export const MushafScreen: React.FC = () => {
     setShareModalVisible(true);
   };
 
+  /**
+   * Joue la récitation de Serigne Aboul Baraka Mbacké pour ce verset : on ne dispose
+   * que de 114 fichiers audio (un par sourate complète), donc on positionne la lecture
+   * du MP3 de la sourate à l'instant estimé du verset (position proportionnelle dans
+   * la sourate). Ce n'est pas un extrait isolé exact.
+   */
+  const handlePlayAyah = async (ayah: Ayah) => {
+    if (!surahDetail) return;
+    const totalAyahs = surahDetail.numberOfAyahs || surahDetail.ayahs.length || 1;
+    const startRatio = getAyahStartRatio(currentSurahNumber, ayah.numberInSurah, totalAyahs);
+    const url = await getEffectiveAudioUrl(currentSurahNumber);
+    const success = await playAudioTrack(url, startRatio);
+    setPlaybackTitle(
+      success
+        ? `${surahDetail.englishName} - Verset ${ayah.numberInSurah}`
+        : `${surahDetail.englishName} (Audio non disponible)`
+    );
+  };
+
   const filteredSurahs = surahs.filter((s) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
@@ -221,13 +244,22 @@ export const MushafScreen: React.FC = () => {
             </Text>
           ) : null}
 
-          <TouchableOpacity
-            style={[styles.shareActionBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
-            onPress={() => handleAyahPress(item)}
-          >
-            <Ionicons name="share-social-outline" size={16} color={colors.gold} style={{ marginRight: 6 }} />
-            <Text style={[styles.shareBtnLabel, { color: colors.gold }]}>Partager verset</Text>
-          </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.shareActionBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border, marginRight: 8 }]}
+              onPress={() => handlePlayAyah(item)}
+            >
+              <Ionicons name="volume-medium-outline" size={16} color={colors.gold} style={{ marginRight: 6 }} />
+              <Text style={[styles.shareBtnLabel, { color: colors.gold }]}>Écouter</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.shareActionBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+              onPress={() => handleAyahPress(item)}
+            >
+              <Ionicons name="share-social-outline" size={16} color={colors.gold} style={{ marginRight: 6 }} />
+              <Text style={[styles.shareBtnLabel, { color: colors.gold }]}>Partager</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -242,6 +274,12 @@ export const MushafScreen: React.FC = () => {
           <View style={[styles.badge, { backgroundColor: colors.gold }]}>
             <Text style={styles.badgeText}>{item.numberInSurah}</Text>
           </View>
+          <TouchableOpacity
+            style={[styles.playIconBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+            onPress={() => handlePlayAyah(item)}
+          >
+            <Ionicons name="volume-medium-outline" size={16} color={colors.gold} />
+          </TouchableOpacity>
         </View>
 
         <Text
@@ -498,6 +536,11 @@ export const MushafScreen: React.FC = () => {
           onClose={() => setShareModalVisible(false)}
         />
       )}
+
+      {/* Barre de lecture (affichée dès qu'un verset a été écouté) */}
+      {playbackTitle && (
+        <AudioPlayerBar surahTitle={playbackTitle} reciterName="Serigne Aboul Baraka Mbacké" />
+      )}
     </SafeAreaView>
   );
 };
@@ -652,7 +695,8 @@ const styles = StyleSheet.create({
   },
   cardTop: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   badge: {
@@ -664,6 +708,18 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontWeight: 'bold',
     fontSize: 11,
+  },
+  playIconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    marginTop: 16,
   },
   arabicTextVertical: {
     textAlign: 'right',
@@ -679,13 +735,13 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   shareActionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    marginTop: 16,
   },
   shareBtnLabel: {
     fontSize: 12,

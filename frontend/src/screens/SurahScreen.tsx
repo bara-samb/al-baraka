@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getSurahDetails } from '../services/quranService';
-import { playAudioTrack, stopAudioTrack } from '../services/audioService';
+import { playAudioTrack, stopAudioTrack, getAyahStartRatio } from '../services/audioService';
 import { isSurahFavorite, toggleFavoriteSurah } from '../services/favoritesService';
 import { saveLastReadPosition } from '../services/bookmarkService';
 import { getArabicFontSize, setArabicFontSize } from '../services/settingsService';
@@ -181,7 +181,9 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route }) => {
   const handlePlayVerse = async (verse: Ayah) => {
     saveLastReadPosition(surahNumber, surahName, englishName, verse.numberInSurah);
     const surahAudioUrl = await getEffectiveAudioUrl(surahNumber);
-    const success = await playAudioTrack(surahAudioUrl);
+    const totalAyahs = surahDetail?.numberOfAyahs || surahDetail?.ayahs.length || 1;
+    const startRatio = getAyahStartRatio(surahNumber, verse.numberInSurah, totalAyahs);
+    const success = await playAudioTrack(surahAudioUrl, startRatio);
 
     if (success) {
       setActivePlaybackInfo({

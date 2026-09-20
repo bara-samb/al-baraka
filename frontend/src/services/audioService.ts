@@ -1,4 +1,14 @@
 import { Audio, AVPlaybackStatus } from 'expo-av';
+import ayahTimingsData from '../data/ayahTimings.json';
+
+interface AyahTimingEntry {
+  totalDuration: number;
+  startSeconds: number[];
+}
+
+// Timestamps par verset générés par détection automatique des pauses du récitateur
+// (voir backend/scripts/generate-ayah-timings.js). Clé = numéro de sourate (string).
+const AYAH_TIMINGS = ayahTimingsData as Record<string, AyahTimingEntry>;
 
 export interface SoundStatus {
   isPlaying: boolean;
@@ -10,6 +20,35 @@ export interface SoundStatus {
 
 let currentSound: Audio.Sound | null = null;
 let currentListeners: Array<(status: SoundStatus) => void> = [];
+
+/**
+ * Estime la fraction (0 à 1) de la durée totale d'une sourate à laquelle commence
+ * un verset donné, en répartissant la durée uniformément sur le nombre de versets.
+ * Approximation grossière utilisée en dernier recours (sourate absente de AYAH_TIMINGS).
+ */
+export const estimateAyahStartRatio = (numberInSurah: number, totalAyahsInSurah: number): number => {
+  if (totalAyahsInSurah <= 1) return 0;
+  return Math.max(0, Math.min(1, (numberInSurah - 1) / totalAyahsInSurah));
+};
+
+/**
+ * Fraction (0 à 1) de la durée totale à laquelle commence un verset donné.
+ * Utilise en priorité les timestamps générés par détection de pause (précis, voir
+ * backend/scripts/generate-ayah-timings.js) ; retombe sur une estimation linéaire
+ * uniquement si la sourate n'a pas encore été traitée.
+ */
+export const getAyahStartRatio = (
+  surahNumber: number,
+  numberInSurah: number,
+  totalAyahsInSurah: number
+): number => {
+  const timing = AYAH_TIMINGS[String(surahNumber)];
+  const preciseStart = timing?.startSeconds?.[numberInSurah - 1];
+  if (timing && preciseStart !== undefined && timing.totalDuration > 0) {
+    return Math.max(0, Math.min(1, preciseStart / timing.totalDuration));
+  }
+  return estimateAyahStartRatio(numberInSurah, totalAyahsInSurah);
+};
 
 /**
  * Initialise les paramètres audio d'arrière-plan pour Expo
@@ -44,20 +83,30 @@ const notifyListeners = (status: SoundStatus) => {
 
 /**
  * Charge et joue un fichier audio distant via une URL MP3.
+ * @param startRatio Position de départ en fraction de la durée totale (0 à 1). Permet de
+ * démarrer la lecture d'un fichier audio de sourate complète à un instant estimé
+ * (ex: pour cibler approximativement un verset précis, faute de fichiers audio
+ * segmentés par verset).
  * Retourne true en cas de succès, false si le fichier n'a pas pu être chargé (ex: 404).
  */
-export const playAudioTrack = async (url: string): Promise<boolean> => {
+export const playAudioTrack = async (url: string, startRatio: number = 0): Promise<boolean> => {
   try {
     await stopAudioTrack();
     await initAudioMode();
 
-    const { sound } = await Audio.Sound.createAsync(
+    const { sound, status } = await Audio.Sound.createAsync(
       { uri: url },
       { shouldPlay: true },
       onPlaybackStatusUpdate
     );
 
     currentSound = sound;
+
+    if (startRatio > 0 && status.isLoaded && status.durationMillis) {
+      const clampedRatio = Math.max(0, Math.min(startRatio, 1));
+      await sound.setPositionAsync(status.durationMillis * clampedRatio);
+    }
+
     return true;
   } catch (error: any) {
     console.warn(`Audio non disponible ou introuvable : ${url}`);
