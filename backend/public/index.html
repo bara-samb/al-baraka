@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AL BARAKA - Administration Audio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0F172A;
+      --card-bg: #1E293B;
+      --border: #334155;
+      --accent: #F59E0B;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --success: #10B981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 30px 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    header h1 {
+      color: var(--accent);
+      font-size: 2.2rem;
+      letter-spacing: 2px;
+    }
+
+    header p {
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .card h2 {
+      font-size: 1.3rem;
+      color: var(--text);
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    select, input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      background: #0B132B;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    select:focus, input[type="file"]:focus {
+      border-color: var(--accent);
+    }
+
+    button.btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #F59E0B, #D97706);
+      color: #0F172A;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+
+    button.btn-submit:hover {
+      opacity: 0.95;
+      transform: translateY(-2px);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+
+    .badge-missing {
+      background: rgba(239, 68, 68, 0.2);
+      color: #EF4444;
+      border: 1px solid #EF4444;
+    }
+
+    .surah-list {
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .surah-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      background: #0B132B;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+
+    .surah-info span {
+      font-weight: 600;
+    }
+
+    .audio-player {
+      margin-top: 4px;
+      height: 30px;
+    }
+
+    .toast {
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .toast.show { display: block; }
+    .toast-success { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+    .toast-error { background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid #EF4444; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>AL BARAKA - Administration Audio</h1>
+      <p>Gestionnaire d'upload des récitations de <strong>Serigne Aboul Baraka Mbacké</strong></p>
+    </header>
+
+    <div class="dashboard-grid">
+      <!-- Formulaire d'upload -->
+      <div class="card">
+        <h2>Ajouter un fichier Audio MP3</h2>
+        <form id="uploadForm">
+          <div class="form-group">
+            <label for="surahSelect">Sélectionner la Sourate (1 à 114) :</label>
+            <select id="surahSelect" name="surahNumber" required>
+              <!-- Rempli par JavaScript -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="audioFile">Fichier MP3 (Nommage auto 001.mp3 à 114.mp3) :</label>
+            <input type="file" id="audioFile" name="audio" accept="audio/mp3, audio/*" required />
+          </div>
+
+          <button type="submit" class="btn-submit">📤 Téléverser le MP3</button>
+        </form>
+
+        <div id="toast" class="toast"></div>
+      </div>
+
+      <!-- Liste et statut des sourates -->
+      <div class="card">
+        <h2>Statut des 114 Sourates (<span id="progressCount">0</span> / 114 prêtes)</h2>
+        <div class="surah-list" id="surahList">
+          <p style="color: var(--text-muted); text-align: center;">Chargement du statut...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SURAH_NAMES = [
+      "1. Al-Fatiha", "2. Al-Baqarah", "3. Ali 'Imran", "4. An-Nisa", "5. Al-Ma'idah",
+      "6. Al-An'am", "7. Al-A'raf", "8. Al-Anfal", "9. At-Tawbah", "10. Yunus",
+      "11. Hud", "12. Yusuf", "13. Ar-Ra'd", "14. Ibrahim", "15. Al-Hijr",
+      "16. An-Nahl", "17. Al-Isra", "18. Al-Kahf", "19. Maryam", "20. Ta-Ha",
+      "21. Al-Anbiya", "22. Al-Hajj", "23. Al-Mu'minun", "24. An-Nur", "25. Al-Furqan",
+      "26. Ash-Shu'ara", "27. An-Naml", "28. Al-Qasas", "29. Al-'Ankabut", "30. Ar-Rum",
+      "31. Luqman", "32. As-Sajdah", "33. Al-Ahzab", "34. Saba", "35. Fatir",
+      "36. Ya-Sin", "37. As-Saffat", "38. Sad", "39. Az-Zumar", "40. Ghafir",
+      "41. Fussilat", "42. Ash-Shuraa", "43. Az-Zukhruf", "44. Ad-Dukhan", "45. Al-Jathiyah",
+      "46. Al-Ahqaf", "47. Muhammad", "48. Al-Fath", "49. Al-Hujurat", "50. Qaf",
+      "51. Adh-Dhariyat", "52. At-Tur", "53. An-Najm", "54. Al-Qamar", "55. Ar-Rahman",
+      "56. Al-Waqi'ah", "57. Al-Hadid", "58. Al-Mujadila", "59. Al-Hashr", "60. Al-Mumtahanah",
+      "61. As-Saff", "62. Al-Jumu'ah", "63. Al-Munafiqun", "64. At-Taghabun", "65. At-Talaq",
+      "66. At-Tahrim", "67. Al-Mulk", "68. Al-Qalam", "69. Al-Haqqah", "70. Al-Ma'arij",
+      "71. Nuh", "72. Al-Jinn", "73. Al-Muzzammil", "74. Al-Muddaththir", "75. Al-Qiyamah",
+      "76. Al-Insan", "77. Al-Mursalat", "78. An-Naba", "79. An-Nazi'at", "80. 'Abasa",
+      "81. At-Takwir", "82. Al-Infitar", "83. Al-Mutaffifin", "84. Al-Inshiqaq", "85. Al-Buruj",
+      "86. At-Tariq", "87. Al-A'la", "88. Al-Ghashiyah", "89. Al-Fajr", "90. Al-Balad",
+      "91. Ash-Shams", "92. Al-Layl", "93. Ad-Duhaa", "94. Ash-Sharh", "95. At-Tin",
+      "96. Al-'Alaq", "97. Al-Qadr", "98. Al-Bayyinah", "99. Az-Zalzalah", "100. Al-'Adiyat",
+      "101. Al-Qari'ah", "102. At-Takathur", "103. Al-'Asr", "104. Al-Humazah", "105. Al-Fil",
+      "106. Quraysh", "107. Al-Ma'un", "108. Al-Kawthar", "109. Al-Kafirun", "110. An-Nasr",
+      "111. Al-Masad", "112. Al-Ikhlas", "113. Al-Falaq", "114. An-Nas"
+    ];
+
+    const selectEl = document.getElementById('surahSelect');
+    SURAH_NAMES.forEach((name, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx + 1;
+      opt.textContent = name;
+      selectEl.appendChild(opt);
+    });
+
+    // --- Gestion de la clé d'administration (ADMIN_API_KEY côté serveur) ---
+    const ADMIN_KEY_STORAGE = 'albaraka_admin_key';
+
+    function getAdminKey() {
+      let key = localStorage.getItem(ADMIN_KEY_STORAGE);
+      if (!key) {
+        key = window.prompt('Clé d\'administration (voir la console du serveur au démarrage) :') || '';
+        if (key) localStorage.setItem(ADMIN_KEY_STORAGE, key);
+      }
+      return key;
+    }
+
+    function resetAdminKey() {
+      localStorage.removeItem(ADMIN_KEY_STORAGE);
+    }
+
+    function authHeaders() {
+      return { 'x-admin-key': getAdminKey() };
+    }
+
+    async function loadAudioStatus() {
+      try {
+        const res = await fetch('/api/admin/audio-status', { headers: authHeaders() });
+        if (res.status === 401) {
+          resetAdminKey();
+          alert('Clé admin invalide. Veuillez la ressaisir.');
+          return loadAudioStatus();
+        }
+        const data = await res.json();
+
+        document.getElementById('progressCount').textContent = data.uploadedCount;
+
+        const surahListEl = document.getElementById('surahList');
+        surahListEl.innerHTML = '';
+
+        data.surahs.forEach((s) => {
+          const name = SURAH_NAMES[s.surahNumber - 1];
+          const item = document.createElement('div');
+          item.className = 'surah-item';
+
+          item.innerHTML = `
+            <div class="surah-info">
+              <span>${name}</span>
+              ${s.exists ? `<br><audio controls src="${s.url}" class="audio-player"></audio>` : ''}
+            </div>
+            <div style="text-align: right;">
+              ${s.exists 
+                ? `<span class="status-badge badge-success">✓ Disponible (${(s.sizeBytes / (1024*1024)).toFixed(1)} MB)</span>
+                   <button onclick="deleteAudio(${s.surahNumber}, '${name}')" style="margin-left: 8px; background: rgba(239,68,68,0.2); border: 1px solid #EF4444; color: #EF4444; border-radius: 6px; padding: 2px 8px; cursor: pointer;">🗑️</button>`
+                : `<span class="status-badge badge-missing">Manquant</span>`
+              }
+            </div>
+          `;
+          surahListEl.appendChild(item);
+        });
+      } catch (err) {
+        console.error('Erreur chargement statut:', err);
+      }
+    }
+
+    async function deleteAudio(surahNumber, surahName) {
+      if (!confirm(`Voulez-vous vraiment supprimer l'audio de la ${surahName} ?`)) return;
+      try {
+        const res = await fetch(`/api/admin/delete-audio/${surahNumber}`, {
+          method: 'DELETE',
+          headers: authHeaders(),
+        });
+        if (res.status === 401) {
+          resetAdminKey();
+          alert('Clé admin invalide. Veuillez la ressaisir.');
+          return;
+        }
+        const result = await res.json();
+        const toast = document.getElementById('toast');
+        if (result.success) {
+          toast.className = 'toast toast-success show';
+          toast.textContent = result.message;
+          loadAudioStatus();
+        } else {
+          toast.className = 'toast toast-error show';
+          toast.textContent = result.error;
+        }
+      } catch (err) {
+        alert('Erreur lors de la suppression');
+      }
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const toast = document.getElementById('toast');
+      toast.className = 'toast';
+      toast.textContent = 'Téléversement en cours...';
+      toast.classList.add('show');
+
+      const formData = new FormData(e.target);
+
+      try {
+        const res = await fetch('/api/admin/upload-audio', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: formData,
+        });
+        if (res.status === 401) {
+          resetAdminKey();
+          toast.className = 'toast toast-error show';
+          toast.textContent = 'Clé admin invalide. Veuillez recharger la page et ressaisir la clé.';
+          return;
+        }
+        const result = await res.json();
+
+        if (result.success) {
+          toast.className = 'toast toast-success show';
+          toast.textContent = result.message;
+          e.target.reset();
+          loadAudioStatus();
+        } else {
+          toast.className = 'toast toast-error show';
+          toast.textContent = result.error || 'Erreur lors du téléversement';
+        }
+      } catch (err) {
+        toast.className = 'toast toast-error show';
+        toast.textContent = 'Erreur réseau lors de l upload';
+      }
+    });
+
+    loadAudioStatus();
+  </script>
+</body>
+</html>

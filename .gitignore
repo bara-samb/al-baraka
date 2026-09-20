@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Backend build output
+backend/dist/
+
+# Backend uploaded audio (large binaries, not source — reconstructible via /admin upload)
+backend/uploads/
+
+# Raw audio source library (multi-GB, exceeds GitHub file size limits — host on S3/R2/Supabase instead)
+AL BARAKA SONGS/
+
+# Expo native projects (regenerated via `npx expo prebuild`)
+frontend/android/
+frontend/ios/
+frontend/.expo/
+
+# Env files (never commit secrets / ADMIN_API_KEY)
+.env
+.env.local
+*.env
+
+# Logs & OS files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

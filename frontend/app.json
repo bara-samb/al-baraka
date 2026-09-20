@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "AL BARAKA",
+    "slug": "al-baraka",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.barasamb.albaraka"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0F172A"
+      },
+      "package": "com.barasamb.albaraka"
+    }
+  }
+}
