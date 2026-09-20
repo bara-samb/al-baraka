@@ -145,7 +145,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Carte En-tête Hégirienne & Basmala */}
-        <View style={[styles.dateCard, { backgroundColor: '#114232', borderColor: colors.gold }]}>
+        <View style={[styles.dateCard, { backgroundColor: '#1B6B4A', borderColor: colors.gold }]}>
           <Text style={styles.basmalaText}>{todayDates.basmalaText}</Text>
           <View style={styles.dateRow}>
             <View style={styles.dateBox}>
@@ -199,7 +199,6 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
           </TouchableOpacity>
 
 
-
           {/* 4. Chapelet (Tasbih) */}
           <TouchableOpacity
             style={[
@@ -220,27 +219,27 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
 
-          {/* 5. Heures de Prière */}
+          {/* 6. Favoris */}
           <TouchableOpacity
             style={[
               styles.gridCard,
               { width: cardWidth, backgroundColor: colors.bgCard, borderColor: colors.border },
             ]}
-            onPress={() => navigation.navigate('MushafTab')}
+            onPress={() => navigation.navigate('Favorites')}
             activeOpacity={0.8}
           >
             <View style={[styles.gridIconBadge, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
-              <Ionicons name="time" size={22} color={colors.gold} />
+              <Ionicons name="heart" size={22} color={colors.gold} />
             </View>
             <Text style={[styles.gridCardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              Heures Prière
+              Favoris
             </Text>
             <Text style={[styles.gridCardSub, { color: colors.textSecondary }]} numberOfLines={1}>
-              Touba • Senegal
+              Sourates et versets
             </Text>
           </TouchableOpacity>
 
-          {/* 6. Hadiya / Don - Ouvre directement la modal */}
+          {/* 7. Hadiya / Don - Ouvre directement la modal */}
           <TouchableOpacity
             style={[
               styles.gridCard,
@@ -263,7 +262,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
 
         {/* Carte Heures de Prière & Touba */}
         {nextPrayer && (
-          <View style={[styles.prayerCard, { backgroundColor: '#114232', borderColor: colors.gold }]}>
+          <View style={[styles.prayerCard, { backgroundColor: '#1B6B4A', borderColor: colors.gold }]}>
             <View style={styles.prayerHeaderRow}>
               <View style={styles.cityBadge}>
                 <Ionicons name="location" size={12} color="#D4AF37" style={{ marginRight: 4 }} />

@@ -220,6 +220,23 @@
         </div>
       </div>
     </div>
+
+    <!-- Azan de la Grande Mosquée de Touba -->
+    <div class="card" style="margin-top: 24px;">
+      <h2>🕌 Azan (Grande Mosquée de Touba)</h2>
+      <p style="color: var(--text-muted); margin-bottom: 14px;">
+        Joué automatiquement dans l'app aux 5 heures de prière. Un seul fichier, nommé <code>touba.mp3</code>.
+      </p>
+      <div id="azanStatus" style="margin-bottom: 14px;"></div>
+      <form id="azanUploadForm">
+        <div class="form-group">
+          <label for="azanFile">Fichier MP3 de l'azan :</label>
+          <input type="file" id="azanFile" name="audio" accept="audio/mp3, audio/*" required />
+        </div>
+        <button type="submit" class="btn-submit">📤 Téléverser l'azan</button>
+      </form>
+      <div id="azanToast" class="toast"></div>
+    </div>
   </div>
 
   <script>
@@ -383,6 +400,88 @@
     });
 
     loadAudioStatus();
+
+    // --- Azan de la Grande Mosquée de Touba ---
+    async function loadAzanStatus() {
+      const statusEl = document.getElementById('azanStatus');
+      try {
+        const res = await fetch('/api/admin/azan-status', { headers: authHeaders() });
+        if (res.status === 401) {
+          resetAdminKey();
+          return;
+        }
+        const data = await res.json();
+        if (data.exists) {
+          statusEl.innerHTML = `
+            <span class="status-badge badge-success">✓ Disponible (${(data.sizeBytes / (1024 * 1024)).toFixed(1)} MB)</span>
+            <audio controls src="${data.url}" class="audio-player" style="display:block; margin-top:8px;"></audio>
+            <button onclick="deleteAzan()" style="margin-top: 8px; background: rgba(239,68,68,0.2); border: 1px solid #EF4444; color: #EF4444; border-radius: 6px; padding: 4px 10px; cursor: pointer;">🗑️ Supprimer</button>
+          `;
+        } else {
+          statusEl.innerHTML = `<span class="status-badge badge-missing">Aucun fichier téléversé</span>`;
+        }
+      } catch (err) {
+        console.error('Erreur chargement statut azan:', err);
+      }
+    }
+
+    async function deleteAzan() {
+      if (!confirm(`Voulez-vous vraiment supprimer l'audio de l'azan ?`)) return;
+      try {
+        const res = await fetch('/api/admin/delete-azan', { method: 'DELETE', headers: authHeaders() });
+        if (res.status === 401) {
+          resetAdminKey();
+          return;
+        }
+        const result = await res.json();
+        const toast = document.getElementById('azanToast');
+        toast.className = result.success ? 'toast toast-success show' : 'toast toast-error show';
+        toast.textContent = result.success ? result.message : result.error;
+        loadAzanStatus();
+      } catch (err) {
+        alert('Erreur lors de la suppression');
+      }
+    }
+
+    document.getElementById('azanUploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const toast = document.getElementById('azanToast');
+      toast.className = 'toast';
+      toast.textContent = 'Téléversement en cours...';
+      toast.classList.add('show');
+
+      const formData = new FormData(e.target);
+
+      try {
+        const res = await fetch('/api/admin/upload-azan', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: formData,
+        });
+        if (res.status === 401) {
+          resetAdminKey();
+          toast.className = 'toast toast-error show';
+          toast.textContent = 'Clé admin invalide. Veuillez recharger la page et ressaisir la clé.';
+          return;
+        }
+        const result = await res.json();
+
+        if (result.success) {
+          toast.className = 'toast toast-success show';
+          toast.textContent = result.message;
+          e.target.reset();
+          loadAzanStatus();
+        } else {
+          toast.className = 'toast toast-error show';
+          toast.textContent = result.error || 'Erreur lors du téléversement';
+        }
+      } catch (err) {
+        toast.className = 'toast toast-error show';
+        toast.textContent = 'Erreur réseau lors de l\'upload';
+      }
+    });
+
+    loadAzanStatus();
   </script>
 </body>
 </html>

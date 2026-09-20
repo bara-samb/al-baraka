@@ -13,8 +13,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getPrayerTimes, calculateNextPrayer, formatRemainingTime } from '../services/prayerService';
 import { PrayerTimings, NextPrayerInfo } from '../types/quran';
+import { PrayerTimesScreenProps } from '../navigation/types';
 
-export const PrayerTimesScreen: React.FC = () => {
+export const PrayerTimesScreen: React.FC<PrayerTimesScreenProps> = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const [timings, setTimings] = useState<PrayerTimings | null>(null);
   const [nextPrayer, setNextPrayer] = useState<NextPrayerInfo | null>(null);
@@ -64,6 +65,14 @@ export const PrayerTimesScreen: React.FC = () => {
 
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          style={[styles.backBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+
         <View style={styles.badgeContainer}>
           <Text style={styles.badgeText}>SÉNÉGAL • TOUBA AL KHAIR</Text>
         </View>
@@ -85,7 +94,7 @@ export const PrayerTimesScreen: React.FC = () => {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Carte Prochaine Prière */}
           {nextPrayer && (
-            <View style={[styles.nextPrayerCard, { backgroundColor: '#114232', borderColor: colors.gold }]}>
+            <View style={[styles.nextPrayerCard, { backgroundColor: '#1B6B4A', borderColor: colors.gold }]}>
               <View style={styles.cardHeader}>
                 <Ionicons name="time" size={22} color={colors.gold} style={{ marginRight: 8 }} />
                 <Text style={styles.nextPrayerLabel}>PROCHAINE PRIÈRE</Text>
@@ -173,6 +182,15 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
+  },
+  backBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   badgeContainer: {
     backgroundColor: 'rgba(212, 175, 55, 0.15)',

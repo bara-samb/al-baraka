@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Vibration,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -21,10 +22,19 @@ import {
   TasbihStats,
 } from '../services/tasbihService';
 
-const TARGET_PRESETS = [11, 33, 99, 100, 129, 313, 1000];
+const TARGET_PRESETS = [11, 33, 99, 100, 313];
 
 export const TasbihScreen: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
+
+  // Dimensions du cercle de perles adaptées à la largeur d'écran (évite tout débordement
+  // sur les téléphones étroits) tout en gardant la taille idéale de 270px sur les grands écrans.
+  const ringSize = Math.min(270, screenWidth * 0.74);
+  const counterSize = ringSize * (190 / 270);
+  const innerSize = ringSize * (168 / 270);
+  const beadRadius = ringSize / 2 - 17;
+
   const [count, setCount] = useState<number>(0);
   const [target, setTarget] = useState<number>(33);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState<boolean>(false);
@@ -52,11 +62,14 @@ export const TasbihScreen: React.FC = () => {
     setCount(nextCount);
 
     if (isRoundComplete) {
-      // Déclencher la vibration/son immédiatement AVANT la modal
+      // Vibration systématique à l'objectif atteint (pattern distinct, plus long) : on ne
+      // se fie pas qu'aux haptics, qui peuvent échouer silencieusement (sans lever d'erreur)
+      // sur certaines plateformes (ex: web).
+      Vibration.vibrate([0, 200, 100, 300]);
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {
-        Vibration.vibrate([0, 200, 100, 300]);
+        // déjà couvert par Vibration.vibrate ci-dessus
       }
       setTimeout(() => {
         setIsReachedModalOpen(true);
@@ -220,13 +233,12 @@ export const TasbihScreen: React.FC = () => {
 
         {/* Bouton Compteur Principal avec Chapelet à billes vert/doré */}
         <View style={styles.counterContainer}>
-          <View style={styles.beadsRingWrapper}>
+          <View style={[styles.beadsRingWrapper, { width: ringSize, height: ringSize }]}>
             {/* Perles du chapelet circulaires */}
             {beads.map((bIndex) => {
               const angle = (bIndex * 360) / beads.length;
-              const radius = 118;
-              const x = radius * Math.cos((angle * Math.PI) / 180);
-              const y = radius * Math.sin((angle * Math.PI) / 180);
+              const x = beadRadius * Math.cos((angle * Math.PI) / 180);
+              const y = beadRadius * Math.sin((angle * Math.PI) / 180);
               const isPassed = count % beads.length > bIndex;
 
               return (
@@ -244,14 +256,23 @@ export const TasbihScreen: React.FC = () => {
             })}
 
             <TouchableOpacity
-              style={[styles.counterCircle, { backgroundColor: colors.gold }]}
+              style={[
+                styles.counterCircle,
+                { width: counterSize, height: counterSize, borderRadius: counterSize / 2, backgroundColor: colors.gold },
+              ]}
               onPress={handleTap}
               activeOpacity={0.85}
             >
               <View
                 style={[
                   styles.counterCircleInner,
-                  { backgroundColor: colors.bgPrimary, borderColor: colors.gold },
+                  {
+                    width: innerSize,
+                    height: innerSize,
+                    borderRadius: innerSize / 2,
+                    backgroundColor: colors.bgPrimary,
+                    borderColor: colors.gold,
+                  },
                 ]}
               >
                 <Text style={[styles.countNumber, { color: colors.gold }]}>{count}</Text>
@@ -348,7 +369,6 @@ export const TasbihScreen: React.FC = () => {
       <TargetReachedModal
         visible={isReachedModalOpen}
         targetCount={target}
-        dhikrName="Zikr"
         onClose={() => setIsReachedModalOpen(false)}
         onReset={() => {
           setCount(0);

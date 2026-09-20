@@ -20,6 +20,25 @@ export interface SoundStatus {
 
 let currentSound: Audio.Sound | null = null;
 let currentListeners: Array<(status: SoundStatus) => void> = [];
+// Position (s) à laquelle mettre en pause automatiquement, pour confiner la lecture à un
+// seul verset (voir playAyahOnly). null = lecture normale, sans limite.
+let stopAtSeconds: number | null = null;
+
+/**
+ * Bornes précises (en secondes) d'un verset au sein du fichier audio de sa sourate,
+ * d'après les timestamps générés par détection de pause. Retourne null si la sourate
+ * n'a pas (encore) de données précises.
+ */
+export const getAyahBoundsSeconds = (
+  surahNumber: number,
+  numberInSurah: number
+): { startSec: number; endSec: number } | null => {
+  const timing = AYAH_TIMINGS[String(surahNumber)];
+  const startSec = timing?.startSeconds?.[numberInSurah - 1];
+  if (!timing || startSec === undefined) return null;
+  const endSec = timing.startSeconds[numberInSurah] ?? timing.totalDuration;
+  return { startSec, endSec };
+};
 
 /**
  * Estime la fraction (0 à 1) de la durée totale d'une sourate à laquelle commence
@@ -40,13 +59,14 @@ export const estimateAyahStartRatio = (numberInSurah: number, totalAyahsInSurah:
 export const getAyahStartRatio = (
   surahNumber: number,
   numberInSurah: number,
-  totalAyahsInSurah: number
+  totalAyahsInSurah?: number
 ): number => {
   const timing = AYAH_TIMINGS[String(surahNumber)];
   const preciseStart = timing?.startSeconds?.[numberInSurah - 1];
   if (timing && preciseStart !== undefined && timing.totalDuration > 0) {
     return Math.max(0, Math.min(1, preciseStart / timing.totalDuration));
   }
+  if (!totalAyahsInSurah) return 0;
   return estimateAyahStartRatio(numberInSurah, totalAyahsInSurah);
 };
 
@@ -90,6 +110,7 @@ const notifyListeners = (status: SoundStatus) => {
  * Retourne true en cas de succès, false si le fichier n'a pas pu être chargé (ex: 404).
  */
 export const playAudioTrack = async (url: string, startRatio: number = 0): Promise<boolean> => {
+  stopAtSeconds = null; // lecture normale : pas de limite de fin
   try {
     await stopAudioTrack();
     await initAudioMode();
@@ -106,6 +127,51 @@ export const playAudioTrack = async (url: string, startRatio: number = 0): Promi
       const clampedRatio = Math.max(0, Math.min(startRatio, 1));
       await sound.setPositionAsync(status.durationMillis * clampedRatio);
     }
+
+    return true;
+  } catch (error: any) {
+    console.warn(`Audio non disponible ou introuvable : ${url}`);
+    notifyListeners({
+      isPlaying: false,
+      position: 0,
+      duration: 0,
+      isLoaded: false,
+      error: 'Audio indisponible (Vérifiez le serveur backend)',
+    });
+    return false;
+  }
+};
+
+/**
+ * Joue UN SEUL verset : démarre à son instant de départ précis et se met en pause
+ * automatiquement à son instant de fin, sans déborder sur le verset précédent ou suivant.
+ * Retourne true en cas de succès, false si le fichier n'a pas pu être chargé ou si aucune
+ * donnée de minutage n'est disponible pour ce verset.
+ */
+export const playAyahOnly = async (
+  url: string,
+  surahNumber: number,
+  numberInSurah: number
+): Promise<boolean> => {
+  const bounds = getAyahBoundsSeconds(surahNumber, numberInSurah);
+  if (!bounds) {
+    // Pas de données précises pour cette sourate : on ne peut pas garantir une limite
+    // fiable, donc on ne joue pas à l'aveugle (mieux vaut échouer explicitement).
+    return false;
+  }
+
+  try {
+    await stopAudioTrack();
+    await initAudioMode();
+
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: url },
+      { shouldPlay: true, positionMillis: Math.max(0, bounds.startSec * 1000) },
+      onPlaybackStatusUpdate
+    );
+
+    currentSound = sound;
+    stopAtSeconds = bounds.endSec;
 
     return true;
   } catch (error: any) {
@@ -145,9 +211,24 @@ export const setIsLoopingTrack = async (isLooping: boolean): Promise<void> => {
 
 const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
   if (status.isLoaded) {
+    const positionSec = status.positionMillis / 1000;
+
+    if (stopAtSeconds !== null && status.isPlaying && positionSec >= stopAtSeconds) {
+      const boundary = stopAtSeconds;
+      stopAtSeconds = null;
+      currentSound?.pauseAsync().catch(() => {});
+      notifyListeners({
+        isPlaying: false,
+        position: boundary,
+        duration: (status.durationMillis || 0) / 1000,
+        isLoaded: true,
+      });
+      return;
+    }
+
     notifyListeners({
       isPlaying: status.isPlaying,
-      position: status.positionMillis / 1000,
+      position: positionSec,
       duration: (status.durationMillis || 0) / 1000,
       isLoaded: true,
     });
@@ -192,6 +273,7 @@ export const togglePlayPause = async (): Promise<void> => {
  */
 export const seekBy = async (secondsDelta: number): Promise<void> => {
   if (!currentSound) return;
+  stopAtSeconds = null; // un seek manuel sort du mode "verset unique"
   try {
     const status = await currentSound.getStatusAsync();
     if (status.isLoaded) {
@@ -208,6 +290,7 @@ export const seekBy = async (secondsDelta: number): Promise<void> => {
  */
 export const seekToPosition = async (seconds: number): Promise<void> => {
   if (!currentSound) return;
+  stopAtSeconds = null; // un seek manuel sort du mode "verset unique"
   try {
     const status = await currentSound.getStatusAsync();
     if (status.isLoaded) {
@@ -235,6 +318,7 @@ export const setPlaybackRate = async (rate: number): Promise<void> => {
  * Arrête et décharge la piste audio actuelle
  */
 export const stopAudioTrack = async (): Promise<void> => {
+  stopAtSeconds = null;
   if (currentSound) {
     try {
       await currentSound.stopAsync();

@@ -101,15 +101,58 @@ function getAudioDuration(filePath) {
   return parseFloat(result.stdout.trim());
 }
 
+/**
+ * Choisit, pour chacune des (expectedAyahCount - 1) frontières attendues, le silence le
+ * PLUS PROCHE de sa position linéaire attendue (plutôt que les silences les plus longs
+ * globalement). Une simple sélection "top N-1 par durée" peut se faire piéger par une
+ * pause isolée mal placée (toux, respiration profonde) qui "vole" la place d'une vraie
+ * frontière ailleurs dans la sourate, décalant tout un bloc de versets. En ancrant le
+ * choix sur la position attendue (durée totale répartie uniformément sur le nombre de
+ * versets), on reste robuste à ce genre d'anomalie isolée, tout en favorisant les pauses
+ * plus longues en cas d'ambiguïté proche.
+ */
 function buildAyahSegments(silences, expectedAyahCount, totalDuration) {
-  // On garde les (expectedAyahCount - 1) silences les PLUS LONGS comme frontières de versets
-  // (une pause de fin de verset est en général plus marquée qu'une respiration interne).
   const neededBoundaries = expectedAyahCount - 1;
-  const sorted = [...silences].sort((a, b) => b.duration - a.duration);
-  const chosen = sorted.slice(0, neededBoundaries);
-  // Remettre dans l'ordre chronologique, utiliser le MILIEU du silence comme frontière
-  chosen.sort((a, b) => a.start - b.start);
-  const boundaries = chosen.map((s) => (s.start + s.end) / 2);
+  const available = [...silences];
+  const boundaries = [];
+  let minStart = 0;
+
+  for (let i = 1; i <= neededBoundaries; i++) {
+    const expectedPos = (totalDuration * i) / expectedAyahCount;
+    // Borne haute de la zone de recherche = position attendue de la PROCHAINE frontière.
+    // Sans cette borne, un candidat mal choisi ici peut "sauter" trop loin en avant et
+    // priver les frontières suivantes de tout candidat valable, ce qui effondre en cascade
+    // tous les versets restants à une durée nulle (bug observé en pratique).
+    const nextExpectedPos = i < neededBoundaries ? (totalDuration * (i + 1)) / expectedAyahCount : totalDuration;
+
+    let bestIdx = -1;
+    let bestScore = Infinity;
+    available.forEach((s, idx) => {
+      const mid = (s.start + s.end) / 2;
+      if (mid <= minStart || mid >= nextExpectedPos) return;
+      const distance = Math.abs(mid - expectedPos);
+      // Une pause plus longue peut compenser un peu de distance à la position attendue,
+      // mais la proximité reste le critère dominant.
+      const score = distance - s.duration * 1.5;
+      if (score < bestScore) {
+        bestScore = score;
+        bestIdx = idx;
+      }
+    });
+
+    let boundary;
+    if (bestIdx === -1) {
+      // Aucun candidat dans la zone attendue : repli sur la position linéaire pure plutôt
+      // que de laisser toutes les frontières suivantes s'effondrer.
+      boundary = Math.max(minStart + 0.3, Math.min(expectedPos, nextExpectedPos - 0.1));
+    } else {
+      const chosen = available[bestIdx];
+      boundary = (chosen.start + chosen.end) / 2;
+      available.splice(bestIdx, 1);
+    }
+    boundaries.push(boundary);
+    minStart = boundary;
+  }
 
   const segments = [];
   let prev = 0;

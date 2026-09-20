@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { getSurahDetails } from '../services/quranService';
-import { playAudioTrack, stopAudioTrack, getAyahStartRatio } from '../services/audioService';
+import { getSurahDetails, WARSH_BASMALA, shouldShowBasmalaHeader } from '../services/quranService';
+import { playAudioTrack, stopAudioTrack, playAyahOnly } from '../services/audioService';
 import { isSurahFavorite, toggleFavoriteSurah } from '../services/favoritesService';
 import { saveLastReadPosition } from '../services/bookmarkService';
 import { getArabicFontSize, setArabicFontSize } from '../services/settingsService';
@@ -27,9 +27,9 @@ import { AudioPlayerBar } from '../components/AudioPlayerBar';
 import { VerseModal } from '../components/VerseModal';
 import { SurahScreenProps } from '../navigation/types';
 
-export const SurahScreen: React.FC<SurahScreenProps> = ({ route }) => {
+export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) => {
   const { colors, isDark } = useTheme();
-  const { surahNumber, surahName, englishName, initialVerseNumber } = route.params as any;
+  const { surahNumber, surahName, englishName, initialVerseNumber } = route.params;
 
   const [surahDetail, setSurahDetail] = useState<SurahDetail | null>(null);
   const [loadingText, setLoadingText] = useState<boolean>(true);
@@ -181,9 +181,7 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route }) => {
   const handlePlayVerse = async (verse: Ayah) => {
     saveLastReadPosition(surahNumber, surahName, englishName, verse.numberInSurah);
     const surahAudioUrl = await getEffectiveAudioUrl(surahNumber);
-    const totalAyahs = surahDetail?.numberOfAyahs || surahDetail?.ayahs.length || 1;
-    const startRatio = getAyahStartRatio(surahNumber, verse.numberInSurah, totalAyahs);
-    const success = await playAudioTrack(surahAudioUrl, startRatio);
+    const success = await playAyahOnly(surahAudioUrl, surahNumber, verse.numberInSurah);
 
     if (success) {
       setActivePlaybackInfo({
@@ -193,7 +191,7 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route }) => {
     } else {
       Alert.alert(
         'Audio indisponible',
-        `L'audio de Serigne Aboul Baraka Mbacké pour la Sourate ${englishName} n'est pas disponible.`
+        `L'audio de ce verset n'est pas disponible pour l'instant.`
       );
     }
   };
@@ -215,6 +213,9 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route }) => {
       <Text style={styles.surahBannerMeta}>
         {englishName} • {surahDetail?.numberOfAyahs || 0} Versets • Riwaya Warsh (ورش)
       </Text>
+      {shouldShowBasmalaHeader(surahNumber) && (
+        <Text style={styles.basmalaHeaderText}>{WARSH_BASMALA}</Text>
+      )}
     </View>
   );
 
@@ -257,69 +258,83 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route }) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? colors.bgPrimary : '#FDFBF7' }]}>
       <View style={[styles.topBar, { backgroundColor: isDark ? colors.bgSecondary : '#F4EFE6', borderBottomColor: colors.border }]}>
-        <View style={styles.topLeft}>
-          <Text style={[styles.topTitle, { color: colors.textPrimary }]}>{englishName}</Text>
-          <Text style={[styles.topSubTitle, { color: colors.textSecondary }]}>
-            {surahDetail?.numberOfAyahs || 0} versets • Warsh (ورش)
-          </Text>
-        </View>
-
-        <View style={styles.fontSizeControls}>
+        <View style={styles.topRow}>
           <TouchableOpacity
-            style={[styles.fontBtn, { backgroundColor: colors.bgPrimary, borderColor: colors.border }]}
-            onPress={() => handleChangeFontSize(-2)}
+            style={[styles.backBtn, { backgroundColor: colors.bgPrimary, borderColor: colors.border }]}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={[styles.fontBtnText, { color: colors.textPrimary }]}>A-</Text>
+            <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.fontBtn, { backgroundColor: colors.bgPrimary, borderColor: colors.border }]}
-            onPress={() => handleChangeFontSize(2)}
-          >
-            <Text style={[styles.fontBtnText, { color: colors.textPrimary }]}>A+</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.topLeft}>
+            <Text style={[styles.topTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+              {englishName}
+            </Text>
+            <Text style={[styles.topSubTitle, { color: colors.textSecondary }]} numberOfLines={1}>
+              {surahDetail?.numberOfAyahs || 0} versets • Warsh (ورش)
+            </Text>
+          </View>
 
-        <TouchableOpacity style={styles.iconHeaderBtn} onPress={handleDownloadToggle}>
-          {isDownloading ? (
-            <ActivityIndicator size="small" color={colors.gold} />
-          ) : (
+          <TouchableOpacity style={styles.iconHeaderBtn} onPress={handleToggleFav}>
             <Ionicons
-              name={isDownloaded ? 'cloud-done' : 'cloud-download-outline'}
+              name={isFav ? 'heart' : 'heart-outline'}
               size={22}
-              color={isDownloaded ? colors.emerald : colors.textSecondary}
+              color={isFav ? '#EF4444' : colors.textSecondary}
             />
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            {
-              backgroundColor: translationLang !== 'none' ? colors.gold : colors.bgPrimary,
-              borderColor: colors.border,
-            },
-          ]}
-          onPress={handleCycleTranslation}
-          activeOpacity={0.8}
-        >
-          <Text
+        <View style={styles.actionsRow}>
+          <View style={styles.fontSizeControls}>
+            <TouchableOpacity
+              style={[styles.fontBtn, { backgroundColor: colors.bgPrimary, borderColor: colors.border }]}
+              onPress={() => handleChangeFontSize(-2)}
+            >
+              <Text style={[styles.fontBtnText, { color: colors.textPrimary }]}>A-</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.fontBtn, { backgroundColor: colors.bgPrimary, borderColor: colors.border }]}
+              onPress={() => handleChangeFontSize(2)}
+            >
+              <Text style={[styles.fontBtnText, { color: colors.textPrimary }]}>A+</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.iconHeaderBtn} onPress={handleDownloadToggle}>
+            {isDownloading ? (
+              <ActivityIndicator size="small" color={colors.gold} />
+            ) : (
+              <Ionicons
+                name={isDownloaded ? 'cloud-done' : 'cloud-download-outline'}
+                size={22}
+                color={isDownloaded ? colors.emerald : colors.textSecondary}
+              />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[
-              styles.toggleButtonText,
-              { color: translationLang !== 'none' ? '#0F172A' : colors.textSecondary },
+              styles.toggleButton,
+              {
+                backgroundColor: translationLang !== 'none' ? colors.gold : colors.bgPrimary,
+                borderColor: colors.border,
+              },
             ]}
+            onPress={handleCycleTranslation}
+            activeOpacity={0.8}
           >
-            {translationLang === 'fr' ? 'FR 🇫🇷' : translationLang === 'en' ? 'EN 🇬🇧' : 'OFF 🚫'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.iconHeaderBtn} onPress={handleToggleFav}>
-          <Ionicons
-            name={isFav ? 'heart' : 'heart-outline'}
-            size={22}
-            color={isFav ? '#EF4444' : colors.textSecondary}
-          />
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.toggleButtonText,
+                { color: translationLang !== 'none' ? '#0F172A' : colors.textSecondary },
+              ]}
+            >
+              {translationLang === 'fr' ? 'FR 🇫🇷' : translationLang === 'en' ? 'EN 🇬🇧' : 'OFF 🚫'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loadingText ? (
@@ -370,10 +385,27 @@ const styles = StyleSheet.create({
   topBar: {
     paddingVertical: 10,
     paddingHorizontal: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     borderBottomWidth: 1,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flexWrap: 'wrap',
+    marginTop: 8,
   },
   topLeft: {
     flex: 1,
@@ -388,7 +420,7 @@ const styles = StyleSheet.create({
   },
   fontSizeControls: {
     flexDirection: 'row',
-    marginHorizontal: 4,
+    marginRight: 'auto',
   },
   fontBtn: {
     width: 28,
@@ -423,7 +455,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 16,
     padding: 16,
-    backgroundColor: '#114232',
+    backgroundColor: '#1B6B4A',
     borderWidth: 1.5,
     borderColor: '#D4AF37',
     alignItems: 'center',
@@ -432,6 +464,16 @@ const styles = StyleSheet.create({
     color: '#D4AF37',
     fontSize: 32,
     fontFamily: 'KFGQPC_Warsh',
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  basmalaHeaderText: {
+    color: '#D4AF37',
+    fontSize: 22,
+    fontFamily: 'KFGQPC_Warsh',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginTop: 12,
   },
   surahBannerMeta: {
     color: '#E2E8F0',

@@ -41,8 +41,11 @@ const getBackendHost = (): string => {
 };
 
 const BACKEND_PORT = 4000;
-export const AUDIO_BASE_URL =
-  PRODUCTION_AUDIO_BASE_URL || `http://${getBackendHost()}:${BACKEND_PORT}/audios/serigne-aboul-baraka-mbacke/`;
+const SERVER_ROOT_URL = PRODUCTION_AUDIO_BASE_URL
+  ? PRODUCTION_AUDIO_BASE_URL.replace(/\/audios\/serigne-aboul-baraka-mbacke\/?$/, '')
+  : `http://${getBackendHost()}:${BACKEND_PORT}`;
+
+export const AUDIO_BASE_URL = PRODUCTION_AUDIO_BASE_URL || `${SERVER_ROOT_URL}/audios/serigne-aboul-baraka-mbacke/`;
 
 /**
  * Formate un numéro de sourate en chaîne à 3 chiffres (ex: 1 -> "001.mp3", 114 -> "114.mp3")
@@ -51,3 +54,10 @@ export const getAudioUrlForSurah = (surahNumber: number): string => {
   const paddedNumber = String(surahNumber).padStart(3, '0');
   return `${AUDIO_BASE_URL}${paddedNumber}.mp3`;
 };
+
+/**
+ * URL du fichier audio de l'azan de la Grande Mosquée de Touba, hébergé par le backend
+ * (déposé manuellement ou via /admin, voir backend/server.ts). Peut ne pas exister
+ * tant que le fichier n'a pas été fourni — playAzan gère l'échec de chargement.
+ */
+export const getAzanAudioUrl = (): string => `${SERVER_ROOT_URL}/audios/azan/touba.mp3`;

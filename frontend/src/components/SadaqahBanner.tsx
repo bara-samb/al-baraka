@@ -38,7 +38,7 @@ export const SadaqahBanner: React.FC = () => {
 
 const styles = StyleSheet.create({
   bannerContainer: {
-    backgroundColor: '#114232',
+    backgroundColor: '#1B6B4A',
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 14,

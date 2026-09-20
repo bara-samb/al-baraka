@@ -7,8 +7,6 @@ export type MainTabParamList = {
   MushafTab: undefined;
   TasbihTab: undefined;
   SadaqahTab: undefined;
-  SearchTab: undefined;
-  FavoritesTab?: undefined;
 };
 
 export type RootStackParamList = {
@@ -17,7 +15,11 @@ export type RootStackParamList = {
     surahNumber: number;
     surahName: string;
     englishName: string;
+    initialVerseNumber?: number;
   };
+  Search: undefined;
+  Favorites: undefined;
+  PrayerTimes: undefined;
 };
 
 export type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'MainTabs'>;
@@ -27,4 +29,6 @@ export type AudioTabScreenProps = BottomTabScreenProps<MainTabParamList, 'AudioT
 export type MushafTabScreenProps = BottomTabScreenProps<MainTabParamList, 'MushafTab'>;
 export type TasbihTabScreenProps = BottomTabScreenProps<MainTabParamList, 'TasbihTab'>;
 export type SadaqahTabScreenProps = BottomTabScreenProps<MainTabParamList, 'SadaqahTab'>;
-export type SearchTabScreenProps = BottomTabScreenProps<MainTabParamList, 'SearchTab'>;
+export type SearchScreenProps = NativeStackScreenProps<RootStackParamList, 'Search'>;
+export type FavoritesScreenProps = NativeStackScreenProps<RootStackParamList, 'Favorites'>;
+export type PrayerTimesScreenProps = NativeStackScreenProps<RootStackParamList, 'PrayerTimes'>;

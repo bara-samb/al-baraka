@@ -136,6 +136,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 10,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   favBtn: {
     padding: 6,

@@ -20,12 +20,9 @@ import {
 import { Surah, Ayah } from '../types/quran';
 import { SurahCard } from '../components/SurahCard';
 import { VerseModal } from '../components/VerseModal';
-import { playAudioTrack } from '../services/audioService';
-import { getAudioUrlForSurah } from '../config/audioConfig';
-
-interface FavoritesScreenProps {
-  navigation: any;
-}
+import { playAyahOnly } from '../services/audioService';
+import { getEffectiveAudioUrl } from '../services/downloadService';
+import { FavoritesScreenProps } from '../navigation/types';
 
 export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) => {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -75,9 +72,9 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
 
   const handlePlayVerse = async (verse: Ayah) => {
     const targetItem = favAyahs.find((i) => i.ayah.number === verse.number);
-    const surahNumber = targetItem ? targetItem.surahNumber : 1;
-    const url = getAudioUrlForSurah(surahNumber);
-    await playAudioTrack(url);
+    if (!targetItem) return;
+    const url = await getEffectiveAudioUrl(targetItem.surahNumber);
+    await playAyahOnly(url, targetItem.surahNumber, verse.numberInSurah);
   };
 
   return (
@@ -85,9 +82,17 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
       {/* En-tête */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.titleRow}>
-          <View>
-            <Text style={[styles.title, { color: colors.gold }]}>VOS FAVORIS</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          <TouchableOpacity
+            style={[styles.themeBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border, marginRight: 10 }]}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.title, { color: colors.gold }]} numberOfLines={1}>VOS FAVORIS</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
               Sourates et Versets sauvegardés
             </Text>
           </View>

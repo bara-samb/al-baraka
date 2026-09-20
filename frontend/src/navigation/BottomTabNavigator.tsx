@@ -16,7 +16,7 @@ const DummySadaqahScreen: React.FC = () => {
   const [modalVisible, setModalVisible] = useState<boolean>(true);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#114232' }}>
+    <View style={{ flex: 1, backgroundColor: '#1B6B4A' }}>
       <SadaqahModal visible={modalVisible} onClose={() => setModalVisible(false)} />
     </View>
   );

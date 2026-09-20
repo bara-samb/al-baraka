@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { MushafPageOrientation, TranslationLanguage } from '../types/quran';
+import { getAzanEnabled, setAzanEnabled } from '../services/azanService';
 
 interface SettingsModalProps {
   visible: boolean;
@@ -34,6 +35,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onChangeTranslationLang,
 }) => {
   const { colors, isDark, toggleTheme } = useTheme();
+  const [azanOn, setAzanOn] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (visible) {
+      getAzanEnabled().then(setAzanOn);
+    }
+  }, [visible]);
+
+  const handleToggleAzan = async (value: boolean) => {
+    setAzanOn(value);
+    await setAzanEnabled(value);
+  };
 
   return (
     <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
@@ -241,6 +254,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Switch
                 value={isDark}
                 onValueChange={toggleTheme}
+                trackColor={{ false: colors.border, true: colors.gold }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            {/* Section 5: Azan automatique */}
+            <View style={[styles.settingSectionRow, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Azan automatique</Text>
+                <Text style={[styles.sectionSub, { color: colors.textSecondary }]}>
+                  Joue l'azan de la Grande Mosquée de Touba à chaque heure de prière
+                </Text>
+              </View>
+              <Switch
+                value={azanOn}
+                onValueChange={handleToggleAzan}
                 trackColor={{ false: colors.border, true: colors.gold }}
                 thumbColor="#FFFFFF"
               />

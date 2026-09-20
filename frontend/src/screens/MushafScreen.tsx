@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
@@ -13,14 +14,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { getSurahList, getSurahDetails } from '../services/quranService';
+import { getSurahList, getSurahDetails, WARSH_BASMALA, shouldShowBasmalaHeader } from '../services/quranService';
 import { getArabicFontSize, setArabicFontSize } from '../services/settingsService';
-import { playAudioTrack, getAyahStartRatio } from '../services/audioService';
+import { playAyahOnly } from '../services/audioService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
+import { saveLastReadPosition } from '../services/bookmarkService';
 import { Surah, SurahDetail, Ayah, MushafPageOrientation, TranslationLanguage } from '../types/quran';
-import { ShareVerseModal } from '../components/ShareVerseModal';
+import { VerseModal } from '../components/VerseModal';
 import { SettingsModal } from '../components/SettingsModal';
 import { AudioPlayerBar } from '../components/AudioPlayerBar';
+import { MushafTabScreenProps } from '../navigation/types';
 
 // Point de départ réel (sourate, verset) de chacun des 30 Juz' du Coran
 const JUZ_START_POINTS: Array<{ surah: number; ayah: number }> = [
@@ -64,7 +67,16 @@ const JUZ_LIST = Array.from({ length: 30 }, (_, i) => ({
   startAyah: JUZ_START_POINTS[i].ayah,
 }));
 
-export const MushafScreen: React.FC = () => {
+const toArabicDigits = (num: number): string => {
+  const digits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return num
+    .toString()
+    .split('')
+    .map((d) => digits[parseInt(d, 10)])
+    .join('');
+};
+
+export const MushafScreen: React.FC<MushafTabScreenProps> = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [currentSurahNumber, setCurrentSurahNumber] = useState<number>(1);
@@ -80,7 +92,7 @@ export const MushafScreen: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   const [selectedAyah, setSelectedAyah] = useState<Ayah | null>(null);
-  const [shareModalVisible, setShareModalVisible] = useState<boolean>(false);
+  const [verseModalVisible, setVerseModalVisible] = useState<boolean>(false);
   const [playbackTitle, setPlaybackTitle] = useState<string | null>(null);
 
   const ayahListRef = useRef<FlatList>(null);
@@ -118,7 +130,10 @@ export const MushafScreen: React.FC = () => {
 
       const targetAyah = pendingScrollAyahRef.current;
       pendingScrollAyahRef.current = null;
-      if (targetAyah && targetAyah > 1 && detail.ayahs && detail.ayahs[targetAyah - 1]) {
+      // Le défilement précis vers un verset n'est possible qu'en mode horizontal (FlatList
+      // paginée par verset) ; en mode vertical (page continue), on se contente de charger
+      // la bonne sourate, le verset de départ du Juz' étant visible dès le haut de la page.
+      if (targetAyah && targetAyah > 1 && orientation === 'horizontal' && detail.ayahs && detail.ayahs[targetAyah - 1]) {
         setTimeout(() => {
           ayahListRef.current?.scrollToIndex({
             index: targetAyah - 1,
@@ -127,6 +142,10 @@ export const MushafScreen: React.FC = () => {
           });
         }, 300);
       }
+
+      // Met à jour le signet "Reprendre la lecture" pour refléter la lecture en cours
+      // dans le Mushaf (jusqu'ici, seul SurahScreen le faisait, d'où le signet figé).
+      saveLastReadPosition(detail.number, detail.name, detail.englishName, targetAyah || 1);
     } catch (e) {
       console.error('Erreur chargement sourate Warsh:', e);
     } finally {
@@ -167,21 +186,17 @@ export const MushafScreen: React.FC = () => {
 
   const handleAyahPress = (ayah: Ayah) => {
     setSelectedAyah(ayah);
-    setShareModalVisible(true);
+    setVerseModalVisible(true);
   };
 
   /**
-   * Joue la récitation de Serigne Aboul Baraka Mbacké pour ce verset : on ne dispose
-   * que de 114 fichiers audio (un par sourate complète), donc on positionne la lecture
-   * du MP3 de la sourate à l'instant estimé du verset (position proportionnelle dans
-   * la sourate). Ce n'est pas un extrait isolé exact.
+   * Joue UNIQUEMENT ce verset (démarre à son instant précis, s'arrête à la fin de ce
+   * verset), d'après les timestamps générés par détection de pause du récitateur.
    */
   const handlePlayAyah = async (ayah: Ayah) => {
     if (!surahDetail) return;
-    const totalAyahs = surahDetail.numberOfAyahs || surahDetail.ayahs.length || 1;
-    const startRatio = getAyahStartRatio(currentSurahNumber, ayah.numberInSurah, totalAyahs);
     const url = await getEffectiveAudioUrl(currentSurahNumber);
-    const success = await playAudioTrack(url, startRatio);
+    const success = await playAyahOnly(url, currentSurahNumber, ayah.numberInSurah);
     setPlaybackTitle(
       success
         ? `${surahDetail.englishName} - Verset ${ayah.numberInSurah}`
@@ -207,96 +222,104 @@ export const MushafScreen: React.FC = () => {
 
   const screenWidth = Dimensions.get('window').width;
 
-  const renderAyahItem = ({ item }: { item: Ayah }) => {
-    if (orientation === 'horizontal') {
-      return (
-        <View
-          style={[
-            styles.horizontalPageCard,
-            {
-              width: screenWidth - 36,
-              backgroundColor: colors.bgCard,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <View style={styles.pageHeader}>
-            <View style={[styles.badge, { backgroundColor: colors.gold }]}>
-              <Text style={styles.badgeText}>Verset {item.numberInSurah}</Text>
-            </View>
-            <Text style={[styles.surahHeaderTitle, { color: colors.gold }]}>
-              {surahDetail?.englishName} ({surahDetail?.name})
-            </Text>
-          </View>
-
-          <Text
-            style={[
-              styles.arabicTextHorizontal,
-              { color: colors.textPrimary, fontSize: arabicFontSize + 2, lineHeight: (arabicFontSize + 2) * 1.8 },
-            ]}
-          >
-            {item.text}
-          </Text>
-
-          {translationLang !== 'none' && item.translation ? (
-            <Text style={[styles.translationText, { color: colors.textSecondary }]}>
-              "{item.translation}"
-            </Text>
-          ) : null}
-
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={[styles.shareActionBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border, marginRight: 8 }]}
-              onPress={() => handlePlayAyah(item)}
-            >
-              <Ionicons name="volume-medium-outline" size={16} color={colors.gold} style={{ marginRight: 6 }} />
-              <Text style={[styles.shareBtnLabel, { color: colors.gold }]}>Écouter</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.shareActionBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
-              onPress={() => handleAyahPress(item)}
-            >
-              <Ionicons name="share-social-outline" size={16} color={colors.gold} style={{ marginRight: 6 }} />
-              <Text style={[styles.shareBtnLabel, { color: colors.gold }]}>Partager</Text>
-            </TouchableOpacity>
-          </View>
+  // Rendu par verset en mode horizontal (page unique par verset, swipe façon liseuse).
+  const renderAyahItem = ({ item }: { item: Ayah }) => (
+    <View
+      style={[
+        styles.horizontalPageCard,
+        {
+          width: screenWidth - 36,
+          backgroundColor: colors.bgCard,
+          borderColor: colors.border,
+        },
+      ]}
+    >
+      <View style={styles.pageHeader}>
+        <View style={[styles.badge, { backgroundColor: colors.gold }]}>
+          <Text style={styles.badgeText}>Verset {item.numberInSurah}</Text>
         </View>
-      );
-    }
+        <Text style={[styles.surahHeaderTitle, { color: colors.gold }]}>
+          {surahDetail?.englishName} ({surahDetail?.name})
+        </Text>
+      </View>
 
-    return (
-      <TouchableOpacity
-        style={[styles.verticalAyahCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
-        onPress={() => handleAyahPress(item)}
-        activeOpacity={0.8}
+      <Text
+        style={[
+          styles.arabicTextHorizontal,
+          { color: colors.textPrimary, fontSize: arabicFontSize + 2, lineHeight: (arabicFontSize + 2) * 1.8 },
+        ]}
       >
-        <View style={styles.cardTop}>
-          <View style={[styles.badge, { backgroundColor: colors.gold }]}>
-            <Text style={styles.badgeText}>{item.numberInSurah}</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.playIconBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
-            onPress={() => handlePlayAyah(item)}
-          >
-            <Ionicons name="volume-medium-outline" size={16} color={colors.gold} />
-          </TouchableOpacity>
-        </View>
+        {item.text}
+      </Text>
+
+      {translationLang !== 'none' && item.translation ? (
+        <Text style={[styles.translationText, { color: colors.textSecondary }]}>
+          "{item.translation}"
+        </Text>
+      ) : null}
+
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={[styles.shareActionBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border, marginRight: 8 }]}
+          onPress={() => handlePlayAyah(item)}
+        >
+          <Ionicons name="volume-medium-outline" size={16} color={colors.gold} style={{ marginRight: 6 }} />
+          <Text style={[styles.shareBtnLabel, { color: colors.gold }]}>Écouter</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.shareActionBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+          onPress={() => handleAyahPress(item)}
+        >
+          <Ionicons name="share-social-outline" size={16} color={colors.gold} style={{ marginRight: 6 }} />
+          <Text style={[styles.shareBtnLabel, { color: colors.gold }]}>Partager</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  /**
+   * Rendu "page de Mushaf" pour le mode vertical : un unique paragraphe arabe continu et
+   * justifié (comme un vrai Coran imprimé), avec le numéro de chaque verset inséré en
+   * ornement inline ﴿٥﴾ dans le flux du texte, plutôt qu'une carte séparée par verset.
+   * Toucher un verset ouvre le menu d'actions (Écouter / Partager / Favoris / Copier).
+   */
+  const renderContinuousPage = () => {
+    if (!surahDetail) return null;
+    return (
+      <>
+        {shouldShowBasmalaHeader(surahDetail.number) && (
+          <Text style={[styles.basmalaHeaderText, { color: colors.gold }]}>{WARSH_BASMALA}</Text>
+        )}
 
         <Text
           style={[
-            styles.arabicTextVertical,
-            { color: colors.textPrimary, fontSize: arabicFontSize, lineHeight: arabicFontSize * 1.8 },
+            styles.continuousArabicText,
+            { color: colors.textPrimary, fontSize: arabicFontSize, lineHeight: arabicFontSize * 2.1 },
           ]}
         >
-          {item.text}
+          {surahDetail.ayahs.map((ayah) => (
+            <Text key={ayah.number} onPress={() => handleAyahPress(ayah)}>
+              {ayah.text}
+              <Text style={[styles.verseMarker, { color: colors.gold }]}>
+                {' '}﴿{toArabicDigits(ayah.numberInSurah)}﴾{' '}
+              </Text>
+            </Text>
+          ))}
         </Text>
 
-        {translationLang !== 'none' && item.translation ? (
-          <Text style={[styles.translationText, { color: colors.textSecondary }]}>
-            {item.translation}
-          </Text>
-        ) : null}
-      </TouchableOpacity>
+        {translationLang !== 'none' && (
+          <View style={styles.translationBlock}>
+            {surahDetail.ayahs.map((ayah) =>
+              ayah.translation ? (
+                <Text key={ayah.number} style={[styles.translationLine, { color: colors.textSecondary }]}>
+                  <Text style={{ color: colors.gold, fontWeight: 'bold' }}>{ayah.numberInSurah}. </Text>
+                  {ayah.translation}
+                </Text>
+              ) : null
+            )}
+          </View>
+        )}
+      </>
     );
   };
 
@@ -421,6 +444,15 @@ export const MushafScreen: React.FC = () => {
 
       {/* Control Toolbar Header */}
       <View style={[styles.toolbar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
+        {/* Bouton Accueil 🏠 */}
+        <TouchableOpacity
+          style={[styles.homeBtn, { backgroundColor: colors.bgPrimary, borderColor: colors.border }]}
+          onPress={() => navigation.navigate('HomeTab')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="home-outline" size={18} color={colors.textPrimary} />
+        </TouchableOpacity>
+
         {/* Prev / Next Surah */}
         <View style={styles.surahNavControls}>
           <TouchableOpacity
@@ -496,21 +528,23 @@ export const MushafScreen: React.FC = () => {
             Chargement des versets Warsh...
           </Text>
         </View>
+      ) : orientation === 'vertical' ? (
+        // Mode "page de Mushaf" : un flux continu de texte justifié, comme un vrai Coran.
+        <ScrollView contentContainerStyle={styles.continuousPageContent} showsVerticalScrollIndicator={false}>
+          {renderContinuousPage()}
+        </ScrollView>
       ) : (
         <FlatList
           ref={ayahListRef}
-          key={orientation} // force re-render on orientation change
           data={surahDetail?.ayahs}
           onScrollToIndexFailed={() => {}}
-          horizontal={orientation === 'horizontal'}
-          inverted={orientation === 'horizontal'} // Sens de défilement de Droite à Gauche (RTL) pour l'Arabe
-          pagingEnabled={orientation === 'horizontal'}
+          horizontal
+          inverted // Sens de défilement de Droite à Gauche (RTL) pour l'Arabe
+          pagingEnabled
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.number.toString()}
           renderItem={renderAyahItem}
-          contentContainerStyle={
-            orientation === 'horizontal' ? styles.horizontalListContent : styles.verticalListContent
-          }
+          contentContainerStyle={styles.horizontalListContent}
         />
       )}
 
@@ -526,14 +560,15 @@ export const MushafScreen: React.FC = () => {
         onChangeTranslationLang={(lang) => setTranslationLang(lang)}
       />
 
-      {/* Share Modal */}
+      {/* Modal d'action sur le verset (Écouter / Partager / Favoris / Copier) */}
       {surahDetail && (
-        <ShareVerseModal
-          visible={shareModalVisible}
+        <VerseModal
+          visible={verseModalVisible}
           ayah={selectedAyah}
           surahName={surahDetail.englishName}
           surahNumber={surahDetail.number}
-          onClose={() => setShareModalVisible(false)}
+          onClose={() => setVerseModalVisible(false)}
+          onPlayVerse={handlePlayAyah}
         />
       )}
 
@@ -599,6 +634,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
   },
+  homeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
+  },
   surahNavControls: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -663,6 +707,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 20,
     alignItems: 'center',
+  },
+  basmalaHeaderText: {
+    fontSize: 24,
+    fontFamily: 'KFGQPC_Warsh',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginBottom: 16,
+  },
+  continuousPageContent: {
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 140,
+  },
+  continuousArabicText: {
+    fontFamily: 'KFGQPC_Warsh',
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  verseMarker: {
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  translationBlock: {
+    marginTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(148, 163, 184, 0.25)',
+    paddingTop: 16,
+  },
+  translationLine: {
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 10,
   },
   verticalAyahCard: {
     borderRadius: 14,

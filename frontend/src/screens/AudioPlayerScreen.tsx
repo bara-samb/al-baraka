@@ -16,6 +16,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getSurahList } from '../services/quranService';
 import { playAudioTrack, subscribeAudioStatus, togglePlayPause, SoundStatus } from '../services/audioService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
+import { saveLastReadPosition } from '../services/bookmarkService';
 import { Surah } from '../types/quran';
 import { FullAudioPlayer, RepeatMode } from '../components/FullAudioPlayer';
 
@@ -63,6 +64,7 @@ export const AudioPlayerScreen: React.FC = () => {
 
   const handlePlaySurah = async (surah: Surah) => {
     setCurrentSurah(surah);
+    saveLastReadPosition(surah.number, surah.name, surah.englishName, 1);
     const audioUrl = await getEffectiveAudioUrl(surah.number);
     await playAudioTrack(audioUrl);
   };
@@ -355,6 +357,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginRight: 10,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   playBtnSmall: {
     padding: 2,

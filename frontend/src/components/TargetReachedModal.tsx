@@ -12,7 +12,6 @@ import { useTheme } from '../context/ThemeContext';
 interface TargetReachedModalProps {
   visible: boolean;
   targetCount: number;
-  dhikrName: string;
   onClose: () => void;
   onReset: () => void;
 }
@@ -20,7 +19,6 @@ interface TargetReachedModalProps {
 export const TargetReachedModal: React.FC<TargetReachedModalProps> = ({
   visible,
   targetCount,
-  dhikrName,
   onClose,
   onReset,
 }) => {
@@ -38,10 +36,8 @@ export const TargetReachedModal: React.FC<TargetReachedModalProps> = ({
 
           <Text style={[styles.title, { color: colors.gold }]}>Objectif Atteint !</Text>
           <Text style={[styles.subtitle, { color: colors.textPrimary }]}>
-            Macha'Allah ! Vous avez accompli vos {targetCount} zikrs pour :
+            Macha'Allah ! Vous avez accompli vos {targetCount} zikrs.
           </Text>
-
-          <Text style={[styles.dhikrText, { color: colors.emerald }]}>"{dhikrName}"</Text>
 
           <Text style={[styles.blessingText, { color: colors.textSecondary }]}>
             Qu'Allah accepte vos invocations et vous accorde Sa bénédiction (Baraka).
@@ -108,12 +104,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 6,
-  },
-  dhikrText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 12,
   },
   blessingText: {
     fontSize: 12,

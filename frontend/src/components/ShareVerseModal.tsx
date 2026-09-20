@@ -99,7 +99,7 @@ export const ShareVerseModal: React.FC<ShareVerseModalProps> = ({
 
           {/* Bouton d'écoute audio Serigne Aboul Baraka Mbacké */}
           <TouchableOpacity
-            style={[styles.playAudioBtn, { backgroundColor: '#114232', borderColor: colors.gold }]}
+            style={[styles.playAudioBtn, { backgroundColor: '#1B6B4A', borderColor: colors.gold }]}
             onPress={handlePlayRecitation}
             activeOpacity={0.85}
           >

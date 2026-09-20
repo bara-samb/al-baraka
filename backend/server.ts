@@ -31,10 +31,14 @@ const requireAdminAuth = (req: Request, res: Response, next: NextFunction) => {
 
 // Dossier de stockage des fichiers audio
 const UPLOAD_DIR = path.join(__dirname, 'uploads', 'audios', 'serigne-aboul-baraka-mbacke');
+const AZAN_DIR = path.join(__dirname, 'uploads', 'audios', 'azan');
 
-// S'assurer que le dossier d'upload existe
+// S'assurer que les dossiers d'upload existent
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+if (!fs.existsSync(AZAN_DIR)) {
+  fs.mkdirSync(AZAN_DIR, { recursive: true });
 }
 
 // Configuration de Multer pour le nommage normalisé (ex: 001.mp3, 114.mp3)
@@ -66,8 +70,29 @@ const upload = multer({
   },
 });
 
+// Upload de l'azan (fichier unique : touba.mp3)
+const azanStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, AZAN_DIR),
+  filename: (_req, _file, cb) => cb(null, 'touba.mp3'),
+});
+
+const azanUpload = multer({
+  storage: azanStorage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // Limite de 20 Mo (un azan est court)
+  fileFilter: (_req, file, cb) => {
+    const hasMp3Extension = file.originalname.toLowerCase().endsWith('.mp3');
+    const hasAudioMimetype = file.mimetype.includes('audio');
+    if (hasMp3Extension && hasAudioMimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error('Seuls les fichiers MP3 (extension .mp3 et type audio) sont autorisés'));
+    }
+  },
+});
+
 // Middleware pour servir les fichiers audio statiques
 app.use('/audios/serigne-aboul-baraka-mbacke', express.static(UPLOAD_DIR));
+app.use('/audios/azan', express.static(AZAN_DIR));
 
 // Servir l'interface d'administration Web
 app.use('/admin', express.static(path.join(__dirname, 'public')));
@@ -135,6 +160,40 @@ app.delete('/api/admin/delete-audio/:surahNumber', requireAdminAuth, (req: Reque
     } else {
       return res.status(404).json({ success: false, error: 'Fichier non trouvé' });
     }
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: statut du fichier audio de l'azan (Grande Mosquée de Touba)
+app.get('/api/admin/azan-status', requireAdminAuth, (_req: Request, res: Response) => {
+  const filePath = path.join(AZAN_DIR, 'touba.mp3');
+  const exists = fs.existsSync(filePath);
+  res.json({
+    exists,
+    url: exists ? '/audios/azan/touba.mp3' : null,
+    sizeBytes: exists ? fs.statSync(filePath).size : 0,
+  });
+});
+
+// API: Uploader le fichier MP3 de l'azan (Grande Mosquée de Touba)
+app.post('/api/admin/upload-azan', requireAdminAuth, azanUpload.single('audio'), (_req: Request, res: Response) => {
+  res.json({
+    success: true,
+    message: `Audio de l'azan de Touba téléversé avec succès !`,
+    url: '/audios/azan/touba.mp3',
+  });
+});
+
+// API: Supprimer le fichier MP3 de l'azan
+app.delete('/api/admin/delete-azan', requireAdminAuth, (_req: Request, res: Response) => {
+  try {
+    const filePath = path.join(AZAN_DIR, 'touba.mp3');
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      return res.json({ success: true, message: `Fichier audio de l'azan supprimé avec succès !` });
+    }
+    return res.status(404).json({ success: false, error: 'Fichier non trouvé' });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

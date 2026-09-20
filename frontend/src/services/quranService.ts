@@ -1,7 +1,26 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiResponse, Surah, SurahDetail, SearchOccurrenceStats, SearchOccurrenceItem } from '../types/quran';
+import warshTextData from '../data/warshText.json';
 
 const BASE_URL = 'https://api.alquran.cloud/v1';
+
+// Texte réel en riwaya Warsh (source : King Fahd Quran Complex, via qurancomplex.gov.sa),
+// embarqué localement car aucune édition "ar.warsh" n'existe réellement sur l'API
+// alquran.cloud (elle y retombait silencieusement sur le texte Hafs/Uthmani par défaut).
+// Indexé par numéro de sourate (string) -> tableau de versets (index 0 = verset 1).
+const WARSH_TEXT: Record<string, string[]> = warshTextData as Record<string, string[]>;
+
+// La Basmala en calligraphie Warsh = le verset 1 d'Al-Fatiha (même formule, même graphie).
+export const WARSH_BASMALA = WARSH_TEXT['1'][0];
+
+/**
+ * Indique si l'en-tête décoratif "Bismillah" doit être affiché au-dessus des versets
+ * d'une sourate : oui pour toutes les sourates SAUF Al-Fatiha (où la Basmala est déjà
+ * le verset 1 lui-même) et At-Tawbah/Sourate 9 (seule sourate du Coran sans Basmala,
+ * exception bien connue liée à son contexte de révélation).
+ */
+export const shouldShowBasmalaHeader = (surahNumber: number): boolean =>
+  surahNumber !== 1 && surahNumber !== 9;
 
 // In-Memory Cache pour des performances ultra-rapides
 let cachedSurahList: Surah[] | null = null;
@@ -49,7 +68,9 @@ export const getSurahDetails = async (
   surahNumber: number,
   lang: 'fr' | 'en' = 'fr'
 ): Promise<SurahDetail> => {
-  const cacheKey = `warsh_${surahNumber}_${lang}`;
+  // "v2" invalide le cache local des utilisateurs ayant déjà l'ancien texte Hafs
+  // (l'édition "ar.warsh" utilisée avant n'existait pas réellement côté API).
+  const cacheKey = `warsh_v2_${surahNumber}_${lang}`;
 
   if (cachedSurahDetailsMap.has(cacheKey)) {
     return cachedSurahDetailsMap.get(cacheKey)!;
@@ -67,42 +88,86 @@ export const getSurahDetails = async (
   }
 
   try {
+    // On récupère la traduction + toutes les métadonnées par verset (juz, page, sajda...)
+    // via l'API, mais le TEXTE ARABE vient du jeu de données Warsh embarqué localement.
     const translationEdition = lang === 'en' ? 'en.sahih' : 'fr.hamidullah';
-    const response = await fetch(`${BASE_URL}/surah/${surahNumber}/editions/ar.warsh,${translationEdition}`);
-    if (response.ok) {
-      const json: ApiResponse<SurahDetail[]> = await response.json();
-      if (Array.isArray(json.data) && json.data.length >= 2) {
-        const warshData = json.data[0];
-        const translationData = json.data[1];
-
-        const combinedAyahs = warshData.ayahs.map((ayah, index) => ({
-          ...ayah,
-          translation: translationData.ayahs[index]?.text || '',
-        }));
-
-        const result: SurahDetail = {
-          ...warshData,
-          ayahs: combinedAyahs,
-        };
-
-        cachedSurahDetailsMap.set(cacheKey, result);
-        AsyncStorage.setItem(`@albaraka_surah_${cacheKey}`, JSON.stringify(result)).catch(() => {});
-        return result;
-      }
+    const response = await fetch(`${BASE_URL}/surah/${surahNumber}/${translationEdition}`);
+    if (!response.ok) {
+      throw new Error(`Erreur lors de la récupération de la sourate ${surahNumber}: ${response.status}`);
     }
+    const json: ApiResponse<SurahDetail> = await response.json();
+    const translationData = json.data;
+    const warshVerses = WARSH_TEXT[String(surahNumber)];
 
-    // Fallback si l'édition combinée rencontre un souci
-    const fallbackResponse = await fetch(`${BASE_URL}/surah/${surahNumber}/ar.warsh`);
-    if (!fallbackResponse.ok) {
-      throw new Error(`Erreur lors de la récupération Warsh de la sourate ${surahNumber}`);
-    }
-    const fallbackJson: ApiResponse<SurahDetail> = await fallbackResponse.json();
-    cachedSurahDetailsMap.set(cacheKey, fallbackJson.data);
-    return fallbackJson.data;
+    const combinedAyahs = translationData.ayahs.map((ayah, index) => ({
+      ...ayah,
+      text: warshVerses?.[index] || ayah.text,
+      translation: ayah.text,
+    }));
+
+    const result: SurahDetail = {
+      ...translationData,
+      ayahs: combinedAyahs,
+    };
+
+    cachedSurahDetailsMap.set(cacheKey, result);
+    AsyncStorage.setItem(`@albaraka_surah_${cacheKey}`, JSON.stringify(result)).catch(() => {});
+    return result;
   } catch (error) {
     console.error(`quranService.getSurahDetails (Warsh) error (Surah ${surahNumber}):`, error);
     throw error;
   }
+};
+
+/**
+ * Retire les diacritiques (tashkeel) et normalise les variantes de lettres arabes,
+ * pour permettre une recherche insensible aux voyelles courtes (ex: rechercher "\u0627\u0644\u0631\u062D\u0645\u0646"
+ * sans avoir \u00E0 taper les diacritiques du texte Warsh embarqu\u00E9).
+ */
+const normalizeArabic = (text: string): string =>
+  text
+    .replace(/\p{Mn}/gu, '') // diacritiques / signes combinants (tashkeel, marques Warsh)
+    .replace(/\u0640/g, '') // tatwil
+    .replace(/[\u0625\u0623\u0622\u0671]/g, '\u0627')
+    .replace(/\u0649/g, '\u064A')
+    .replace(/\u0629/g, '\u0647');
+
+/**
+ * Recherche locale dans le texte Warsh embarqu\u00E9 (aucune \u00E9dition "ar.warsh" n'existe c\u00F4t\u00E9 API).
+ */
+const searchArabicLocally = async (query: string): Promise<SearchOccurrenceStats> => {
+  const normalizedQuery = normalizeArabic(query);
+  const surahList = await getSurahList();
+  const surahMap = new Map(surahList.map((s) => [s.number, s]));
+
+  const results: SearchOccurrenceItem[] = [];
+  const uniqueSurahs = new Set<number>();
+
+  for (const [surahNumStr, verses] of Object.entries(WARSH_TEXT)) {
+    const surahNumber = parseInt(surahNumStr, 10);
+    const surahInfo = surahMap.get(surahNumber);
+    verses.forEach((verseText, idx) => {
+      if (normalizeArabic(verseText).includes(normalizedQuery)) {
+        uniqueSurahs.add(surahNumber);
+        results.push({
+          surahNumber,
+          surahName: surahInfo?.name || '',
+          englishName: surahInfo?.englishName || '',
+          numberInSurah: idx + 1,
+          text: verseText,
+        });
+      }
+    });
+  }
+
+  results.sort((a, b) => a.surahNumber - b.surahNumber || a.numberInSurah - b.numberInSurah);
+
+  return {
+    query,
+    totalOccurrences: results.length,
+    totalSurahs: uniqueSurahs.size,
+    results,
+  };
 };
 
 /**
@@ -119,11 +184,13 @@ export const searchQuranOccurrences = async (query: string): Promise<SearchOccur
     };
   }
 
-  try {
-    const isArabic = /[\u0600-\u06FF]/.test(trimmed);
-    const edition = isArabic ? 'ar.warsh' : 'fr.hamidullah';
+  const isArabic = /[\u0600-\u06FF]/.test(trimmed);
+  if (isArabic) {
+    return searchArabicLocally(trimmed);
+  }
 
-    const response = await fetch(`${BASE_URL}/search/${encodeURIComponent(trimmed)}/all/${edition}`);
+  try {
+    const response = await fetch(`${BASE_URL}/search/${encodeURIComponent(trimmed)}/all/fr.hamidullah`);
     if (!response.ok) {
       const fallbackResp = await fetch(`${BASE_URL}/search/${encodeURIComponent(trimmed)}/all/en.sahih`);
       if (!fallbackResp.ok) {

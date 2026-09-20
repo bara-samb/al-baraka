@@ -77,6 +77,15 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ navigation }) => {
 
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.backRow}>
+          <TouchableOpacity
+            style={[styles.backBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
         <Text style={[styles.title, { color: colors.gold }]}>RECHERCHE GLOBALE</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Moteur de recherche par mots et occurrences dans le Saint Coran
@@ -170,6 +179,17 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
+  },
+  backRow: {
+    marginBottom: 10,
+  },
+  backBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontSize: 22,

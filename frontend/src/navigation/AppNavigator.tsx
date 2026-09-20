@@ -4,6 +4,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { BottomTabNavigator } from './BottomTabNavigator';
 import { SurahScreen } from '../screens/SurahScreen';
+import { SearchScreen } from '../screens/SearchScreen';
+import { FavoritesScreen } from '../screens/FavoritesScreen';
+import { PrayerTimesScreen } from '../screens/PrayerTimesScreen';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -30,13 +33,12 @@ const NavigationWrapper = () => {
           component={BottomTabNavigator}
           options={{ headerShown: false }}
         />
-        <Stack.Screen
-          name="Surah"
-          component={SurahScreen}
-          options={({ route }) => ({
-            title: route.params.englishName,
-          })}
-        />
+        {/* Ces écrans gèrent leur propre en-tête (avec bouton retour) en interne,
+            donc on masque l'en-tête natif pour éviter une double barre de titre. */}
+        <Stack.Screen name="Surah" component={SurahScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="PrayerTimes" component={PrayerTimesScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
