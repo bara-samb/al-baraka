@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,17 +10,12 @@ import {
   Vibration,
   useWindowDimensions,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
 import { CustomTargetModal } from '../components/CustomTargetModal';
 import { TargetReachedModal } from '../components/TargetReachedModal';
-import {
-  getTasbihStats,
-  saveTasbihIncrement,
-  resetTasbihStats,
-  TasbihStats,
-} from '../services/tasbihService';
+import { saveTasbihIncrement } from '../services/tasbihService';
 
 const TARGET_PRESETS = [11, 33, 99, 100, 313];
 
@@ -39,21 +34,6 @@ export const TasbihScreen: React.FC = () => {
   const [target, setTarget] = useState<number>(33);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState<boolean>(false);
   const [isReachedModalOpen, setIsReachedModalOpen] = useState<boolean>(false);
-
-  const [stats, setStats] = useState<TasbihStats>({
-    totalCount: 0,
-    completedRounds: 0,
-    dhikrCounts: {},
-  });
-
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  const loadStats = async () => {
-    const s = await getTasbihStats();
-    setStats(s);
-  };
 
   const handleTap = async () => {
     const nextCount = count + 1;
@@ -82,8 +62,7 @@ export const TasbihScreen: React.FC = () => {
       }
     }
 
-    const updatedStats = await saveTasbihIncrement('tasbih_main', isRoundComplete);
-    setStats(updatedStats);
+    await saveTasbihIncrement('tasbih_main', isRoundComplete);
   };
 
   const handleResetCount = () => {
@@ -96,25 +75,6 @@ export const TasbihScreen: React.FC = () => {
           text: 'Réinitialiser',
           style: 'destructive',
           onPress: () => setCount(0),
-        },
-      ]
-    );
-  };
-
-  const handleResetAllStats = () => {
-    Alert.alert(
-      'Effacer les statistiques',
-      'Voulez-vous vraiment réinitialiser vos statistiques globales de zikr ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Tout Effacer',
-          style: 'destructive',
-          onPress: async () => {
-            await resetTasbihStats();
-            setCount(0);
-            await loadStats();
-          },
         },
       ]
     );
@@ -320,39 +280,6 @@ export const TasbihScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Carte des Statistiques */}
-        <View
-          style={[
-            styles.statsCard,
-            { backgroundColor: colors.bgSecondary, borderColor: colors.border },
-          ]}
-        >
-          <View style={styles.statsHeader}>
-            <MaterialCommunityIcons name="finance" size={20} color={colors.gold} />
-            <Text style={[styles.statsTitle, { color: colors.textPrimary }]}>
-              Statistiques Cumulées
-            </Text>
-          </View>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: colors.gold }]}>
-                {stats.totalCount}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Répétitions</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: colors.emerald }]}>
-                {stats.completedRounds}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Tours Complétés</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.clearStatsBtn} onPress={handleResetAllStats}>
-            <Text style={styles.clearStatsText}>Réinitialiser les stats</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
 
       {/* Modales */}
@@ -515,46 +442,5 @@ const styles = StyleSheet.create({
   resetBtnText: {
     fontSize: 13,
     fontWeight: '600',
-  },
-  statsCard: {
-    marginHorizontal: 16,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-  },
-  statsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  statsTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statBox: {
-    alignItems: 'center',
-    padding: 10,
-  },
-  statNumber: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  clearStatsBtn: {
-    marginTop: 12,
-    alignSelf: 'center',
-  },
-  clearStatsText: {
-    color: '#EF4444',
-    fontSize: 12,
-    textDecorationLine: 'underline',
   },
 });

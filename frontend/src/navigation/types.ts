@@ -19,7 +19,6 @@ export type RootStackParamList = {
   };
   Search: undefined;
   Favorites: undefined;
-  PrayerTimes: undefined;
 };
 
 export type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'MainTabs'>;
@@ -31,4 +30,3 @@ export type TasbihTabScreenProps = BottomTabScreenProps<MainTabParamList, 'Tasbi
 export type SadaqahTabScreenProps = BottomTabScreenProps<MainTabParamList, 'SadaqahTab'>;
 export type SearchScreenProps = NativeStackScreenProps<RootStackParamList, 'Search'>;
 export type FavoritesScreenProps = NativeStackScreenProps<RootStackParamList, 'Favorites'>;
-export type PrayerTimesScreenProps = NativeStackScreenProps<RootStackParamList, 'PrayerTimes'>;

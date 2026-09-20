@@ -52,7 +52,7 @@ export const SadaqahModal: React.FC<SadaqahModalProps> = ({ visible, onClose }) 
                 <Text style={styles.badgeText}>HADIYA / DON</Text>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color="#F7F1E5" />
+                <Ionicons name="close" size={24} color="#0F4C2E" />
               </TouchableOpacity>
             </View>
 
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxHeight: Dimensions.get('window').height * 0.88,
-    backgroundColor: '#1B6B4A',
+    backgroundColor: '#A8E6C1',
     borderRadius: 24,
     borderWidth: 1.5,
     borderColor: '#D4AF37',
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     borderColor: '#D4AF37',
   },
   badgeText: {
-    color: '#D4AF37',
+    color: '#8B6914',
     fontSize: 11,
     fontWeight: 'bold',
     letterSpacing: 1,
@@ -162,30 +162,30 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#F7F1E5',
+    color: '#0F4C2E',
     marginTop: 14,
     textAlign: 'center',
   },
   arabicSub: {
     fontSize: 18,
-    color: '#D4AF37',
+    color: '#8B6914',
     textAlign: 'center',
     marginTop: 4,
     marginBottom: 14,
   },
   description: {
     fontSize: 14,
-    color: '#E0E7FF',
+    color: '#1F4A38',
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 22,
   },
   bold: {
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#0F4C2E',
   },
   goldText: {
-    color: '#D4AF37',
+    color: '#8B6914',
     fontWeight: 'bold',
   },
   actionSection: {
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   spiritualNote: {
     fontSize: 12.5,
-    color: '#D4AF37',
+    color: '#8B6914',
     fontStyle: 'italic',
     textAlign: 'center',
     marginBottom: 16,
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   cancelText: {
-    color: '#94A3B8',
+    color: '#3D7A5C',
     fontSize: 13,
     textDecorationLine: 'underline',
   },

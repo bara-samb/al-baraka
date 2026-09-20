@@ -99,11 +99,11 @@ export const ShareVerseModal: React.FC<ShareVerseModalProps> = ({
 
           {/* Bouton d'écoute audio Serigne Aboul Baraka Mbacké */}
           <TouchableOpacity
-            style={[styles.playAudioBtn, { backgroundColor: '#1B6B4A', borderColor: colors.gold }]}
+            style={[styles.playAudioBtn, { backgroundColor: '#A8E6C1', borderColor: colors.gold }]}
             onPress={handlePlayRecitation}
             activeOpacity={0.85}
           >
-            <Ionicons name="play-circle" size={22} color="#D4AF37" style={{ marginRight: 8 }} />
+            <Ionicons name="play-circle" size={22} color="#0F4C2E" style={{ marginRight: 8 }} />
             <Text style={styles.playAudioText}>
               Écouter la récitation de Serigne Aboul Baraka
             </Text>
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   playAudioText: {
-    color: '#F7F1E5',
+    color: '#0F4C2E',
     fontWeight: 'bold',
     fontSize: 13,
   },

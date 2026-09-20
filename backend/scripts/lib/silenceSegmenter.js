@@ -102,14 +102,15 @@ function getAudioDuration(filePath) {
 }
 
 /**
- * Choisit, pour chacune des (expectedAyahCount - 1) frontières attendues, le silence le
- * PLUS PROCHE de sa position linéaire attendue (plutôt que les silences les plus longs
- * globalement). Une simple sélection "top N-1 par durée" peut se faire piéger par une
- * pause isolée mal placée (toux, respiration profonde) qui "vole" la place d'une vraie
- * frontière ailleurs dans la sourate, décalant tout un bloc de versets. En ancrant le
- * choix sur la position attendue (durée totale répartie uniformément sur le nombre de
- * versets), on reste robuste à ce genre d'anomalie isolée, tout en favorisant les pauses
- * plus longues en cas d'ambiguïté proche.
+ * Choisit, pour chacune des (expectedAyahCount - 1) frontières attendues, la pause la
+ * PLUS LONGUE dans une zone bornée autour de la position attendue (plutôt que la pause
+ * la plus proche de cette position). Une respiration à l'intérieur d'un verset est en
+ * général plus courte que la vraie pause de fin de verset ; si on choisit par simple
+ * proximité, une respiration interne légèrement plus proche de la position attendue peut
+ * "voler" la place de la vraie frontière, ce qui fait démarrer la lecture d'un verset en
+ * réalité encore dans la fin du verset précédent. La borne de zone (position attendue de
+ * la frontière SUIVANTE) évite par ailleurs qu'un choix isolé ne "saute" trop loin en
+ * avant et ne prive les frontières suivantes de tout candidat (effondrement en cascade).
  */
 function buildAyahSegments(silences, expectedAyahCount, totalDuration) {
   const neededBoundaries = expectedAyahCount - 1;
@@ -119,23 +120,15 @@ function buildAyahSegments(silences, expectedAyahCount, totalDuration) {
 
   for (let i = 1; i <= neededBoundaries; i++) {
     const expectedPos = (totalDuration * i) / expectedAyahCount;
-    // Borne haute de la zone de recherche = position attendue de la PROCHAINE frontière.
-    // Sans cette borne, un candidat mal choisi ici peut "sauter" trop loin en avant et
-    // priver les frontières suivantes de tout candidat valable, ce qui effondre en cascade
-    // tous les versets restants à une durée nulle (bug observé en pratique).
     const nextExpectedPos = i < neededBoundaries ? (totalDuration * (i + 1)) / expectedAyahCount : totalDuration;
 
     let bestIdx = -1;
-    let bestScore = Infinity;
+    let bestDuration = -1;
     available.forEach((s, idx) => {
       const mid = (s.start + s.end) / 2;
       if (mid <= minStart || mid >= nextExpectedPos) return;
-      const distance = Math.abs(mid - expectedPos);
-      // Une pause plus longue peut compenser un peu de distance à la position attendue,
-      // mais la proximité reste le critère dominant.
-      const score = distance - s.duration * 1.5;
-      if (score < bestScore) {
-        bestScore = score;
+      if (s.duration > bestDuration) {
+        bestDuration = s.duration;
         bestIdx = idx;
       }
     });
@@ -147,7 +140,10 @@ function buildAyahSegments(silences, expectedAyahCount, totalDuration) {
       boundary = Math.max(minStart + 0.3, Math.min(expectedPos, nextExpectedPos - 0.1));
     } else {
       const chosen = available[bestIdx];
-      boundary = (chosen.start + chosen.end) / 2;
+      // On se cale vers la FIN du silence (70%) plutôt que son milieu : la reprise de la
+      // récitation (donc le vrai début du prochain verset) est plus proche de la fin de la
+      // pause que de son milieu, ce qui réduit le risque de démarrer encore un peu avant.
+      boundary = chosen.start + (chosen.end - chosen.start) * 0.7;
       available.splice(bestIdx, 1);
     }
     boundaries.push(boundary);

@@ -6,7 +6,6 @@ import { BottomTabNavigator } from './BottomTabNavigator';
 import { SurahScreen } from '../screens/SurahScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
-import { PrayerTimesScreen } from '../screens/PrayerTimesScreen';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -38,7 +37,6 @@ const NavigationWrapper = () => {
         <Stack.Screen name="Surah" component={SurahScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="PrayerTimes" component={PrayerTimesScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

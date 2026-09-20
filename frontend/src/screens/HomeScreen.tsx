@@ -16,10 +16,9 @@ import {
   subscribeBookmarkChange,
   LastReadBookmark,
 } from '../services/bookmarkService';
-import { getPrayerTimes, calculateNextPrayer } from '../services/prayerService';
 import { getTodayFormattedDates } from '../services/hijriService';
 import { getArabicFontSize, setArabicFontSize } from '../services/settingsService';
-import { NextPrayerInfo, MushafPageOrientation, TranslationLanguage } from '../types/quran';
+import { MushafPageOrientation, TranslationLanguage } from '../types/quran';
 import { SadaqahBanner } from '../components/SadaqahBanner';
 import { SettingsModal } from '../components/SettingsModal';
 import { ContactModal } from '../components/ContactModal';
@@ -30,7 +29,6 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
   const { width } = useWindowDimensions();
 
   const [lastBookmark, setLastBookmark] = useState<LastReadBookmark | null>(null);
-  const [nextPrayer, setNextPrayer] = useState<NextPrayerInfo | null>(null);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
@@ -51,7 +49,6 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
 
   useEffect(() => {
     loadBookmark();
-    loadPrayerTimes();
     loadSettings();
 
     const unsub = subscribeBookmarkChange((bookmark) => {
@@ -63,16 +60,6 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
   const loadSettings = async () => {
     const size = await getArabicFontSize();
     setArabicFontSizeState(size);
-  };
-
-  const loadPrayerTimes = async () => {
-    try {
-      const timings = await getPrayerTimes();
-      const np = calculateNextPrayer(timings);
-      setNextPrayer(np);
-    } catch (e) {
-      console.error('Erreur chargement prière home:', e);
-    }
   };
 
   const loadBookmark = async () => {
@@ -145,11 +132,11 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Carte En-tête Hégirienne & Basmala */}
-        <View style={[styles.dateCard, { backgroundColor: '#1B6B4A', borderColor: colors.gold }]}>
+        <View style={[styles.dateCard, { backgroundColor: '#A8E6C1', borderColor: colors.gold }]}>
           <Text style={styles.basmalaText}>{todayDates.basmalaText}</Text>
           <View style={styles.dateRow}>
             <View style={styles.dateBox}>
-              <Ionicons name="calendar-outline" size={14} color="#D4AF37" style={{ marginRight: 6 }} />
+              <Ionicons name="calendar-outline" size={14} color="#0F4C2E" style={{ marginRight: 6 }} />
               <Text style={styles.hijriText}>{todayDates.hijriFormatted}</Text>
             </View>
             <Text style={styles.gregorianText}>{todayDates.gregorianFormatted}</Text>
@@ -260,32 +247,6 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Carte Heures de Prière & Touba */}
-        {nextPrayer && (
-          <View style={[styles.prayerCard, { backgroundColor: '#1B6B4A', borderColor: colors.gold }]}>
-            <View style={styles.prayerHeaderRow}>
-              <View style={styles.cityBadge}>
-                <Ionicons name="location" size={12} color="#D4AF37" style={{ marginRight: 4 }} />
-                <Text style={styles.cityText}>TOUBA • SÉNÉGAL</Text>
-              </View>
-              <View style={styles.warshBadge}>
-                <Text style={styles.warshText}>Riwaya Warsh (ورش)</Text>
-              </View>
-            </View>
-
-            <View style={styles.prayerMainRow}>
-              <View>
-                <Text style={styles.prayerLabel}>PROCHAINE PRIÈRE</Text>
-                <Text style={styles.prayerName}>{nextPrayer.name}</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.prayerTime}>{nextPrayer.time}</Text>
-                <Text style={styles.prayerTimer}>- {nextPrayer.formattedRemaining}</Text>
-              </View>
-            </View>
-          </View>
-        )}
-
         {/* Carte Reprendre la lecture (Signet / Marque-page) */}
         {lastBookmark && (
           <TouchableOpacity
@@ -389,7 +350,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   basmalaText: {
-    color: '#D4AF37',
+    color: '#0F4C2E',
     fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -407,12 +368,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hijriText: {
-    color: '#E2E8F0',
+    color: '#0F4C2E',
     fontSize: 12,
     fontWeight: 'bold',
   },
   gregorianText: {
-    color: '#94A3B8',
+    color: '#3D7A5C',
     fontSize: 11,
   },
   featureGrid: {
@@ -447,74 +408,6 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     marginTop: 2,
     textAlign: 'center',
-  },
-  prayerCard: {
-    marginHorizontal: 16,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  prayerHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  cityText: {
-    color: '#D4AF37',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  warshBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  warshText: {
-    color: '#E2E8F0',
-    fontSize: 10,
-  },
-  prayerMainRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  prayerLabel: {
-    color: '#D4AF37',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  prayerName: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: 'bold',
-    marginTop: 2,
-  },
-  prayerTime: {
-    color: '#D4AF37',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  prayerTimer: {
-    color: '#CBD5E1',
-    fontSize: 11,
-    marginTop: 1,
   },
   bookmarkCard: {
     marginHorizontal: 16,

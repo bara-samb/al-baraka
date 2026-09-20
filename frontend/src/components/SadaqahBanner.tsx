@@ -14,7 +14,7 @@ export const SadaqahBanner: React.FC = () => {
         activeOpacity={0.88}
       >
         <View style={styles.leftIconContainer}>
-          <Ionicons name="heart" size={20} color="#D4AF37" />
+          <Ionicons name="heart" size={20} color="#0F4C2E" />
         </View>
 
         <View style={styles.textContainer}>
@@ -38,7 +38,7 @@ export const SadaqahBanner: React.FC = () => {
 
 const styles = StyleSheet.create({
   bannerContainer: {
-    backgroundColor: '#1B6B4A',
+    backgroundColor: '#A8E6C1',
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -70,11 +70,11 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#D4AF37',
+    color: '#0F4C2E',
   },
   bannerSubtitle: {
     fontSize: 11,
-    color: '#F7F1E5',
+    color: '#3D7A5C',
     marginTop: 2,
   },
   actionBtn: {
