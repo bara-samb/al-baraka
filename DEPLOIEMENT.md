@@ -54,7 +54,17 @@ Une seule fois :
    npx wrangler pages project create al-baraka-app --production-branch main --force
    ```
 
-Puis, à chaque mise à jour du site :
+Ensuite, **chaque push sur `main`** qui touche `frontend/` met le site à jour automatiquement
+(GitHub Action `.github/workflows/deploy-web.yml`, suivi dans l'onglet *Actions* du dépôt).
+Elle a besoin, une seule fois, de deux secrets dans GitHub (*Settings* → *Secrets and
+variables* → *Actions* → *New repository secret*) :
+
+- `CLOUDFLARE_API_TOKEN` : sur https://dash.cloudflare.com/profile/api-tokens → *Create Token*
+  → *Create Custom Token*, permission *Account* → *Cloudflare Pages* → *Edit*.
+- `CLOUDFLARE_ACCOUNT_ID` : l'identifiant du compte (*Account ID*, affiché par
+  `npx wrangler whoami` ou dans la colonne de droite du tableau de bord).
+
+Pour mettre en ligne sans passer par GitHub (depuis votre ordinateur) :
 
 ```bash
 npm run deploy:web       # exporte le site puis le met en ligne (wrangler pages deploy)
