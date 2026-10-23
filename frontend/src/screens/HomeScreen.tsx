@@ -132,14 +132,14 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Carte En-tête Hégirienne & Basmala */}
-        <View style={[styles.dateCard, { backgroundColor: '#A8E6C1', borderColor: colors.gold }]}>
-          <Text style={styles.basmalaText}>{todayDates.basmalaText}</Text>
+        <View style={[styles.dateCard, { backgroundColor: colors.accentBg, borderColor: colors.gold }]}>
+          <Text style={[styles.basmalaText, { color: colors.accentText }]}>{todayDates.basmalaText}</Text>
           <View style={styles.dateRow}>
             <View style={styles.dateBox}>
-              <Ionicons name="calendar-outline" size={14} color="#0F4C2E" style={{ marginRight: 6 }} />
-              <Text style={styles.hijriText}>{todayDates.hijriFormatted}</Text>
+              <Ionicons name="calendar-outline" size={14} color={colors.accentText} style={{ marginRight: 6 }} />
+              <Text style={[styles.hijriText, { color: colors.accentText }]}>{todayDates.hijriFormatted}</Text>
             </View>
-            <Text style={styles.gregorianText}>{todayDates.gregorianFormatted}</Text>
+            <Text style={[styles.gregorianText, { color: colors.accentSub }]}>{todayDates.gregorianFormatted}</Text>
           </View>
         </View>
 
@@ -346,7 +346,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   basmalaText: {
-    color: '#0F4C2E',
     fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -364,12 +363,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   hijriText: {
-    color: '#0F4C2E',
     fontSize: 12,
     fontWeight: 'bold',
   },
   gregorianText: {
-    color: '#3D7A5C',
     fontSize: 11,
   },
   featureGrid: {

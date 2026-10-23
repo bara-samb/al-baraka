@@ -13,20 +13,39 @@ export interface ThemeColors {
   border: string;
   modalBg: string;
   cardShadow: string;
+  /** Cartes mises en avant de l'accueil (date / basmala, bannière Sadaqah). */
+  accentBg: string;
+  accentText: string;
+  accentSub: string;
+  /** Barre d'onglets flottante. */
+  tabBarBg: string;
+  tabBarBorder: string;
+  tabActive: string;
+  tabActivePill: string;
+  tabInactive: string;
 }
 
+// Mode sombre : nuit verte et or doux, comme le Mushaf en mode sombre.
 export const darkColors: ThemeColors = {
-  bgPrimary: '#0F172A',
-  bgSecondary: '#1E293B',
-  bgCard: '#1E293B',
-  textPrimary: '#F8FAFC',
-  textSecondary: '#94A3B8',
-  gold: '#F59E0B',
-  goldLight: '#FBBF24',
-  emerald: '#10B981',
-  border: '#334155',
-  modalBg: '#1E293B',
-  cardShadow: 'rgba(0, 0, 0, 0.4)',
+  bgPrimary: '#08130F',
+  bgSecondary: '#0F201A',
+  bgCard: '#11241D',
+  textPrimary: '#F2EBD9',
+  textSecondary: '#9FB2A7',
+  gold: '#D6B158',
+  goldLight: '#E8CC80',
+  emerald: '#3FBF8F',
+  border: '#21382E',
+  modalBg: '#0F201A',
+  cardShadow: 'rgba(0, 0, 0, 0.5)',
+  accentBg: '#0F3327',
+  accentText: '#F1DFA8',
+  accentSub: '#A9C7B6',
+  tabBarBg: '#0F201A',
+  tabBarBorder: '#2A4337',
+  tabActive: '#E8CC80',
+  tabActivePill: 'rgba(214, 177, 88, 0.16)',
+  tabInactive: '#7F9488',
 };
 
 export const lightColors: ThemeColors = {
@@ -41,6 +60,14 @@ export const lightColors: ThemeColors = {
   border: '#E2E8F0',
   modalBg: '#FFFFFF',
   cardShadow: 'rgba(0, 0, 0, 0.08)',
+  accentBg: '#A8E6C1',
+  accentText: '#0F4C2E',
+  accentSub: '#3D7A5C',
+  tabBarBg: '#FFFFFF',
+  tabBarBorder: '#E2E8F0',
+  tabActive: '#114232',
+  tabActivePill: '#E8F5E9',
+  tabInactive: '#64748B',
 };
 
 interface ThemeContextType {

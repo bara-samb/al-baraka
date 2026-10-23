@@ -2,30 +2,32 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SadaqahModal } from './SadaqahModal';
+import { useTheme } from '../context/ThemeContext';
 
 export const SadaqahBanner: React.FC = () => {
+  const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState<boolean>(false);
 
   return (
     <>
       <TouchableOpacity
-        style={styles.bannerContainer}
+        style={[styles.bannerContainer, { backgroundColor: colors.accentBg, borderColor: colors.gold }]}
         onPress={() => setModalVisible(true)}
         activeOpacity={0.88}
       >
         <View style={styles.leftIconContainer}>
-          <Ionicons name="heart" size={20} color="#0F4C2E" />
+          <Ionicons name="heart" size={20} color={colors.accentText} />
         </View>
 
         <View style={styles.textContainer}>
-          <Text style={styles.bannerTitle}>Sadaqah Jariyah (صدقة جارية)</Text>
-          <Text style={styles.bannerSubtitle} numberOfLines={1}>
+          <Text style={[styles.bannerTitle, { color: colors.accentText }]}>Sadaqah Jariyah (صدقة جارية)</Text>
+          <Text style={[styles.bannerSubtitle, { color: colors.accentSub }]} numberOfLines={1}>
             Soutenez l'hébergement des récitations de Serigne Aboul Baraka Mbacké
 
           </Text>
         </View>
 
-        <View style={styles.actionBtn}>
+        <View style={[styles.actionBtn, { backgroundColor: colors.gold }]}>
           <Text style={styles.actionBtnText}>Faire un Don</Text>
           <Ionicons name="chevron-forward" size={14} color="#114232" style={{ marginLeft: 2 }} />
         </View>
@@ -38,7 +40,6 @@ export const SadaqahBanner: React.FC = () => {
 
 const styles = StyleSheet.create({
   bannerContainer: {
-    backgroundColor: '#A8E6C1',
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -47,7 +48,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#D4AF37',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
@@ -70,15 +70,12 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#0F4C2E',
   },
   bannerSubtitle: {
     fontSize: 11,
-    color: '#3D7A5C',
     marginTop: 2,
   },
   actionBtn: {
-    backgroundColor: '#D4AF37',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,

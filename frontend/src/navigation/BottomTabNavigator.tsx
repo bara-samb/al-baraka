@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { MainTabParamList } from './types';
+import { useTheme } from '../context/ThemeContext';
 import { HomeScreen } from '../screens/HomeScreen';
 import { AudioPlayerScreen } from '../screens/AudioPlayerScreen';
 import { MushafScreen } from '../screens/MushafScreen';
@@ -24,11 +25,12 @@ const DummySadaqahScreen: React.FC = () => {
 
 // Custom Bottom Tab Bar Floating Design Elevé (Surelevé en bas)
 const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
+  const { colors } = useTheme();
   const [sadaqahModalVisible, setSadaqahModalVisible] = useState<boolean>(false);
 
   return (
     <>
-      <View style={styles.tabBarContainer}>
+      <View style={[styles.tabBarContainer, { backgroundColor: colors.tabBarBg, borderColor: colors.tabBarBorder }]}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
@@ -83,18 +85,18 @@ const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, n
               activeOpacity={0.8}
             >
               {/* Pilule verte uniquement autour de l'icône active */}
-              <View style={[styles.iconPill, isFocused && styles.activePill]}>
+              <View style={[styles.iconPill, isFocused && { backgroundColor: colors.tabActivePill }]}>
                 {isMaterialIcon ? (
                   <MaterialCommunityIcons
                     name={isFocused ? 'hand-heart' : 'hand-heart-outline'}
                     size={20}
-                    color={isFocused ? '#114232' : '#64748B'}
+                    color={isFocused ? colors.tabActive : colors.tabInactive}
                   />
                 ) : (
                   <Ionicons
                     name={iconName}
                     size={20}
-                    color={isFocused ? '#114232' : '#64748B'}
+                    color={isFocused ? colors.tabActive : colors.tabInactive}
                   />
                 )}
               </View>
@@ -103,7 +105,7 @@ const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, n
               <Text
                 style={[
                   styles.tabLabel,
-                  { color: isFocused ? '#114232' : '#64748B', fontWeight: isFocused ? 'bold' : '500' },
+                  { color: isFocused ? colors.tabActive : colors.tabInactive, fontWeight: isFocused ? 'bold' : '500' },
                 ]}
                 numberOfLines={1}
               >
@@ -150,7 +152,6 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     height: 68,
-    backgroundColor: '#FFFFFF',
     borderRadius: 26,
     flexDirection: 'row',
     alignItems: 'center',
@@ -162,7 +163,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   tabItem: {
     flex: 1,
@@ -177,9 +177,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
-  },
-  activePill: {
-    backgroundColor: '#E8F5E9',
   },
   tabLabel: {
     fontSize: 9.5,

@@ -56,6 +56,7 @@ import {
 import { SettingsModal } from '../components/SettingsModal';
 import { MushafIndexModal, MushafIndexTab } from '../components/mushaf/MushafIndexModal';
 import { MushafPage } from '../components/mushaf/MushafPage';
+import { MushafSearchModal } from '../components/mushaf/MushafSearchModal';
 import { MushafPalette, mushafDark, mushafLight } from '../components/mushaf/mushafTheme';
 import { MushafTabScreenProps } from '../navigation/types';
 
@@ -84,6 +85,9 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
   const [indexTab, setIndexTab] = useState<MushafIndexTab>('surahs');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sheetVerse, setSheetVerse] = useState<MushafVerse | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  // Verset ouvert depuis la recherche : surligné sur sa page.
+  const [foundVerse, setFoundVerse] = useState<MushafVerse | null>(null);
 
   // Récitation lancée depuis le Mushaf : sourate jouée + verset en cours (surligné).
   const [playbackSurah, setPlaybackSurah] = useState<number | null>(null);
@@ -303,10 +307,11 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
 
   const pageVerses = page ? MUSHAF_PAGES[page - 1] : [];
   const firstVerse = pageVerses[0];
-  const selectedKey = sheetVerse ? verseKey(sheetVerse) : null;
+  const highlighted = sheetVerse ?? foundVerse;
+  const selectedKey = highlighted ? verseKey(highlighted) : null;
   const recitedKey = playbackSurah !== null && recitedAyah !== null ? `${playbackSurah}:${recitedAyah}` : null;
   const recitedPage = playbackSurah !== null && recitedAyah !== null ? getMushafVerse(playbackSurah, recitedAyah)?.page : undefined;
-  const selectedPage = sheetVerse?.page;
+  const selectedPage = highlighted?.page;
 
   const renderPage = useCallback(
     ({ item }: { item: number }) => (
@@ -429,15 +434,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
             setIndexVisible(true);
           }}
         />
-        <ToolbarButton
-          icon="grid-outline"
-          label="Juz'"
-          color={p.onGreen}
-          onPress={() => {
-            setIndexTab('juz');
-            setIndexVisible(true);
-          }}
-        />
+        <ToolbarButton icon="search" label="Recherche" color={p.onGreen} onPress={() => setSearchOpen(true)} />
         <TouchableOpacity
           style={[styles.listenBtn, { backgroundColor: p.gold }]}
           onPress={handleListenPress}
@@ -516,6 +513,16 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
         palette={p}
         onClose={() => setIndexVisible(false)}
         onSelectPage={(target) => goToPage(target)}
+      />
+
+      <MushafSearchModal
+        visible={searchOpen}
+        palette={p}
+        onClose={() => setSearchOpen(false)}
+        onSelectVerse={(v) => {
+          setFoundVerse(v);
+          goToPage(v.page);
+        }}
       />
 
       <SettingsModal
