@@ -153,9 +153,15 @@ const MushafPageComponent: React.FC<MushafPageProps> = ({
                 >
                   {g.verses.map((v) => {
                     const key = `${v.surah}:${v.ayah}`;
-                    const highlight = key === selectedKey ? p.selected : key === recitedKey ? p.playing : undefined;
+                    const style =
+                      key === selectedKey
+                        ? { backgroundColor: p.selected }
+                        : key === recitedKey
+                          ? // Verset récité : surligné et souligné d'or.
+                            { backgroundColor: p.playing, textDecorationLine: 'underline' as const, textDecorationColor: p.gold }
+                          : undefined;
                     return (
-                      <Text key={key} onPress={() => onVersePress(v)} style={highlight ? { backgroundColor: highlight } : undefined}>
+                      <Text key={key} onPress={() => onVersePress(v)} style={style}>
                         {v.text}{' '}
                         <VerseMarker number={v.ayah} size={markerSize} palette={p} />{' '}
                       </Text>

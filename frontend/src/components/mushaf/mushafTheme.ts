@@ -31,7 +31,7 @@ export const mushafLight: MushafPalette = {
   onGreen: '#F6E7B8',
   ribbon: '#A9342B',
   selected: 'rgba(176, 131, 44, 0.20)',
-  playing: 'rgba(20, 92, 69, 0.16)',
+  playing: 'rgba(20, 92, 69, 0.22)',
   chrome: '#FFFDF6',
   chromeBorder: '#E3D6B4',
 };
@@ -49,7 +49,7 @@ export const mushafDark: MushafPalette = {
   onGreen: '#F3DE9E',
   ribbon: '#C2473C',
   selected: 'rgba(214, 177, 88, 0.22)',
-  playing: 'rgba(76, 190, 148, 0.20)',
+  playing: 'rgba(76, 190, 148, 0.28)',
   chrome: '#0F1814',
   chromeBorder: '#24342C',
 };

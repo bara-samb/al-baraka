@@ -94,6 +94,9 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
   const [recitedAyah, setRecitedAyah] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const playbackSurahRef = useRef<number | null>(null);
+  // « Écouter ce verset » : le verset reste celui choisi. Sans cela, la position de lecture
+  // (0 au chargement, début du verset suivant à l'arrêt) ferait surligner un autre verset.
+  const singleVerseRef = useRef(false);
 
   const [toast, setToast] = useState<string | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
@@ -201,7 +204,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
       const surah = playbackSurahRef.current;
       if (surah === null) return;
       setIsPlaying(status.isPlaying);
-      if (!status.isLoaded) return;
+      if (!status.isLoaded || singleVerseRef.current) return;
       const ayah = getAyahAtPosition(surah, status.position);
       setRecitedAyah((prev) => (prev === ayah ? prev : ayah));
     });
@@ -215,6 +218,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
   }, [recitedAyah, isPlaying, playbackSurah, goToPage]);
 
   const stopRecitation = () => {
+    singleVerseRef.current = false;
     playbackSurahRef.current = null;
     setPlaybackSurah(null);
     setRecitedAyah(null);
@@ -223,6 +227,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
 
   const reciteFrom = async (surah: number, ayah: number) => {
     const url = await getEffectiveAudioUrl(surah);
+    singleVerseRef.current = false;
     playbackSurahRef.current = surah;
     setPlaybackSurah(surah);
     setRecitedAyah(ayah);
@@ -236,6 +241,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
   const handleListenPress = async () => {
     if (page === null) return;
     if (playbackSurah !== null && recitedAyah !== null) {
+      // Reprise après un verset écouté seul : la récitation continue, le surlignage la suit.
+      if (!isPlaying) singleVerseRef.current = false;
       await togglePlayPause();
       return;
     }
@@ -250,6 +257,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
 
   const playSingleVerse = async (v: MushafVerse) => {
     const url = await getEffectiveAudioUrl(v.surah);
+    singleVerseRef.current = true;
     playbackSurahRef.current = v.surah;
     setPlaybackSurah(v.surah);
     setRecitedAyah(v.ayah);
