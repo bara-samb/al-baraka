@@ -6,8 +6,10 @@
     "android": "npx expo start --android",
     "ios": "npx expo start --ios",
     "web": "npx expo start --web",
-    "build:web": "npx expo export -p web",
-    "serve:web": "npx expo serve"
+    "build:web": "node scripts/check-audio-env.js && npx expo export -p web --clear",
+    "serve:web": "npx expo serve",
+    "deploy:web": "npm run build:web && wrangler deploy",
+    "audio:upload": "python ../backend/scripts/upload-audio-archive.py"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -37,7 +39,8 @@
     "@babel/core": "^7.25.0",
     "@types/react": "~19.1.10",
     "babel-preset-expo": "~54.0.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "wrangler": "^4.149.0"
   },
   "private": true
 }

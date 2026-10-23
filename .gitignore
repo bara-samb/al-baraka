@@ -18,6 +18,9 @@ frontend/.expo/
 # Export web (PWA) généré par `npm run build:web`
 frontend/dist/
 
+# Cache local de Wrangler (Cloudflare)
+frontend/.wrangler/
+
 # Env files (never commit secrets / ADMIN_API_KEY)
 .env
 .env.local
@@ -33,3 +36,6 @@ Thumbs.db
 .vscode/
 .idea/
 .claude/
+
+# Cache Python
+__pycache__/

@@ -1,0 +1,9 @@
+# Cloudflare Workers (fichiers statiques) : hébergement du site web (PWA) exporté par
+# `npm run build:web`. Déploiement : `npm run deploy:web` (voir DEPLOIEMENT.md).
+name = "al-baraka"
+compatibility_date = "2026-10-01"
+
+[assets]
+directory = "./dist"
+# Toute adresse inconnue renvoie l'app (application d'une seule page).
+not_found_handling = "single-page-application"
