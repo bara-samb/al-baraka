@@ -57,7 +57,7 @@ import { SettingsModal } from '../components/SettingsModal';
 import { MushafIndexModal, MushafIndexTab } from '../components/mushaf/MushafIndexModal';
 import { MushafPage } from '../components/mushaf/MushafPage';
 import { MushafSearchModal } from '../components/mushaf/MushafSearchModal';
-import { MushafPalette, mushafDark, mushafLight } from '../components/mushaf/mushafTheme';
+import { DIGITS_FONT, MushafPalette, mushafDark, mushafLight } from '../components/mushaf/mushafTheme';
 import { MushafTabScreenProps } from '../navigation/types';
 
 // Sens de lecture arabe : la dernière page est à gauche, la page 1 tout à droite. La liste
@@ -486,7 +486,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
           {sheetVerse && (
             <Pressable style={[styles.sheet, { backgroundColor: p.page, borderColor: p.gold }]}>
               <Text style={[styles.sheetTitle, { color: p.title }]}>
-                سورة {surahNameAr(sheetVerse.surah)} · {toArabicDigits(sheetVerse.ayah)}
+                سورة {surahNameAr(sheetVerse.surah)} · <Text style={{ fontFamily: DIGITS_FONT }}>{toArabicDigits(sheetVerse.ayah)}</Text>
               </Text>
               <Text style={[styles.sheetSub, { color: p.muted }]}>
                 {surahNameLatin(sheetVerse.surah)} · verset {sheetVerse.ayah} · page {sheetVerse.page}
@@ -634,8 +634,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   toastText: {
-    fontFamily: 'KFGQPC_Warsh',
-    fontSize: 16,
+    // Police du système : le libellé contient le numéro du Hizb (voir DIGITS_FONT).
+    fontFamily: DIGITS_FONT,
+    fontSize: 15,
     lineHeight: 26,
     textAlign: 'center',
   },

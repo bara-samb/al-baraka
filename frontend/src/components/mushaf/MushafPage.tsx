@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { MushafPalette } from './mushafTheme';
+import { DIGITS_FONT, MushafPalette } from './mushafTheme';
 import { BookmarkRibbon, OrnamentDivider, PageFrame, SurahBanner } from './Ornaments';
 import {
   MUSHAF_PAGES,
@@ -52,7 +52,10 @@ const VerseMarker: React.FC<{ number: number; size: number; palette: MushafPalet
       transform: [{ translateY: size * 0.18 }],
     }}
   >
-    <Text allowFontScaling={false} style={{ color: palette.title, fontSize: size * (number > 99 ? 0.38 : 0.48), fontWeight: 'bold' }}>
+    <Text
+      allowFontScaling={false}
+      style={{ fontFamily: DIGITS_FONT, color: palette.title, fontSize: size * (number > 99 ? 0.38 : 0.48), fontWeight: 'bold' }}
+    >
       {toArabicDigits(number)}
     </Text>
   </View>

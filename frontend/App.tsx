@@ -5,12 +5,11 @@ import { useFonts } from 'expo-font';
 import { View, ActivityIndicator } from 'react-native';
 
 export default function App() {
-  // fontError : sur le web, certains navigateurs (sanitizer de police Chrome) peuvent
-  // rejeter ce fichier .otf personnalisé. Dans ce cas on ne bloque pas l'app indéfiniment
-  // (fontsLoaded ne deviendrait jamais true) : on démarre quand même, avec un repli sur
-  // la police système pour le texte arabe sur cette plateforme.
+  // Police officielle du Complexe du Roi Fahd pour le texte Warsh (warshData_v10), voir
+  // assets/fonts/KFGQPC_Warsh-LICENSE.txt. Si elle ne se charge pas (fontError), l'app
+  // démarre quand même, avec la police arabe du système.
   const [fontsLoaded, fontError] = useFonts({
-    'KFGQPC_Warsh': require('./assets/fonts/KFGQPC_Warsh.otf'),
+    'KFGQPC_Warsh': require('./assets/fonts/KFGQPC_Warsh.ttf'),
   });
 
   if (!fontsLoaded && !fontError) {

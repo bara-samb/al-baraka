@@ -1,3 +1,9 @@
+import { Platform } from 'react-native';
+
+// Dans la police Warsh du KFGQPC, les chiffres arabes sont dessinés comme des fins de verset
+// ornées : les numéros affichés au milieu du texte Warsh utilisent donc la police du système.
+export const DIGITS_FONT = Platform.select({ ios: 'System', android: 'sans-serif', default: 'system-ui, sans-serif' });
+
 // Palette propre au Mushaf : papier ivoire, encre, vert profond et or (clair),
 // ou nuit verte et or (sombre). Indépendante du thème général pour garder l'aspect "livre".
 export interface MushafPalette {

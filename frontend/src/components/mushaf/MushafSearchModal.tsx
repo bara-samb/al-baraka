@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { MushafPalette } from './mushafTheme';
+import { DIGITS_FONT, MushafPalette } from './mushafTheme';
 import { OrnamentDivider } from './Ornaments';
 import { MushafVerse, surahNameAr, surahNameLatin, toArabicDigits } from '../../services/warshMushafService';
 import { SearchResult, VerseMatch, searchMushaf } from '../../services/mushafSearch';
@@ -72,7 +72,7 @@ export const MushafSearchModal: React.FC<MushafSearchModalProps> = ({ visible, p
             {surahNameLatin(verse.surah)} · verset {verse.ayah} · page {verse.page}
           </Text>
           <Text style={[styles.matchSurah, { color: p.title }]} numberOfLines={1}>
-            سورة {surahNameAr(verse.surah)} · {toArabicDigits(verse.ayah)}
+            سورة {surahNameAr(verse.surah)} · <Text style={{ fontFamily: DIGITS_FONT }}>{toArabicDigits(verse.ayah)}</Text>
           </Text>
         </View>
         <Text style={[styles.matchVerse, { color: p.ink }]}>
