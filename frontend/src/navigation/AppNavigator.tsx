@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect } from 'react';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { BottomTabNavigator } from './BottomTabNavigator';
@@ -7,14 +7,18 @@ import { SurahScreen } from '../screens/SurahScreen';
 import { SearchScreen } from '../screens/SearchScreen';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { RootStackParamList } from './types';
+import { installWebBackButton } from './webBackButton';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const NavigationWrapper = () => {
   const { colors } = useTheme();
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
+
+  useEffect(() => installWebBackButton(navigationRef), [navigationRef]);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         initialRouteName="MainTabs"
         screenOptions={{

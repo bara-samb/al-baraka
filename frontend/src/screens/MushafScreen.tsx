@@ -11,14 +11,15 @@ import {
   Modal,
   Pressable,
   Share,
-  ViewToken,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../context/ThemeContext';
 import { getSurahList } from '../services/quranService';
-import { getArabicFontSize, setArabicFontSize } from '../services/settingsService';
+import { getArabicFontSize, setArabicFontSize, subscribeFontSizeChange } from '../services/settingsService';
 import {
   playAyahOnly,
   playAudioTrack,
@@ -58,10 +59,13 @@ import { MushafPage } from '../components/mushaf/MushafPage';
 import { MushafPalette, mushafDark, mushafLight } from '../components/mushaf/mushafTheme';
 import { MushafTabScreenProps } from '../navigation/types';
 
-const PAGE_NUMBERS = Array.from({ length: MUSHAF_PAGE_COUNT }, (_, i) => i + 1);
+// Sens de lecture arabe : la dernière page est à gauche, la page 1 tout à droite. La liste
+// est construite dans cet ordre plutôt qu'avec `inverted`, dont le retournement par
+// transformations rend le défilement instable sur le web.
+const PAGE_NUMBERS = Array.from({ length: MUSHAF_PAGE_COUNT }, (_, i) => MUSHAF_PAGE_COUNT - i);
+const indexOfPage = (page: number) => MUSHAF_PAGE_COUNT - page;
 // Barre d'onglets flottante (bottom 12 + hauteur 68) : le Mushaf s'arrête au-dessus.
 const TAB_BAR_SPACE = 84;
-const VIEWABILITY = { itemVisiblePercentThreshold: 60 };
 
 const verseKey = (v: { surah: number; ayah: number }) => `${v.surah}:${v.ayah}`;
 
@@ -97,6 +101,12 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
 
   // ---------- Chargement ----------
 
+  // Page d'ouverture, avant que la liste des pages ne soit affichée.
+  const openAt = (target: number) => {
+    pageRef.current = target;
+    setPage(target);
+  };
+
   useEffect(() => {
     (async () => {
       getArabicFontSize().then(setFontSize);
@@ -107,13 +117,16 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
       // Rouvre le Mushaf à la dernière page lue (ou au début de la dernière sourate lue).
       const lastPage = await getMushafLastPage();
       if (lastPage) {
-        setPage(lastPage);
+        openAt(lastPage);
         return;
       }
       const lastRead = await getLastReadPosition();
-      setPage(lastRead ? pageOfVerse(lastRead.surahNumber, 1) : 1);
+      openAt(lastRead ? pageOfVerse(lastRead.surahNumber, 1) : 1);
     })();
   }, []);
+
+  // Taille du texte changée depuis les paramètres de l'accueil.
+  useEffect(() => subscribeFontSizeChange(setFontSize), []);
 
   useEffect(() => {
     Animated.timing(chromeAnim, { toValue: chromeVisible ? 1 : 0, duration: 200, useNativeDriver: true }).start();
@@ -133,14 +146,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
 
   // ---------- Pages ----------
 
-  const goToPage = useCallback((target: number, animated = false) => {
-    const clamped = Math.max(1, Math.min(MUSHAF_PAGE_COUNT, target));
-    listRef.current?.scrollToIndex({ index: clamped - 1, animated });
-  }, []);
-
-  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
-    const visible = viewableItems[0]?.item as number | undefined;
-    if (!visible || visible === pageRef.current) return;
+  const onPageVisible = useRef((visible: number) => {
+    if (visible === pageRef.current) return;
     const previous = pageRef.current;
     pageRef.current = visible;
     setPage(visible);
@@ -155,6 +162,33 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
       }
     }
   }).current;
+
+  // Page voisine : défilement animé. Saut plus lointain (index, récitation) : la liste est
+  // recréée directement sur la page visée ; sur le web, défiler vers des pages pas encore
+  // affichées laisse le magnétisme du défilement ramener la liste vers les pages chargées.
+  const [listKey, setListKey] = useState(0);
+  const goToPage = useCallback(
+    (target: number, animated = false) => {
+      const clamped = Math.max(1, Math.min(MUSHAF_PAGE_COUNT, target));
+      if (clamped === pageRef.current) return;
+      if (animated && pageRef.current !== null && Math.abs(clamped - pageRef.current) === 1) {
+        listRef.current?.scrollToIndex({ index: indexOfPage(clamped), animated: true });
+        return;
+      }
+      onPageVisible(clamped);
+      setListKey((k) => k + 1);
+    },
+    [onPageVisible]
+  );
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const index = Math.round(e.nativeEvent.contentOffset.x / width);
+      const visible = PAGE_NUMBERS[index];
+      if (visible) onPageVisible(visible);
+    },
+    [width, onPageVisible]
+  );
 
   // ---------- Récitation ----------
 
@@ -305,22 +339,22 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
       <View style={[styles.pagesArea, { marginBottom: TAB_BAR_SPACE }]} onLayout={(e) => setPageHeight(e.nativeEvent.layout.height)}>
         {page !== null && pageHeight > 0 && (
           <FlatList
+            key={listKey}
             ref={listRef}
             data={PAGE_NUMBERS}
             keyExtractor={(n) => String(n)}
             renderItem={renderPage}
             extraData={renderPage}
             horizontal
-            inverted // Sens de lecture arabe : la page suivante est à gauche.
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
-            initialScrollIndex={page - 1}
+            initialScrollIndex={indexOfPage(page)}
             initialNumToRender={1}
             maxToRenderPerBatch={2}
             windowSize={3}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={VIEWABILITY}
+            onScroll={handleScroll}
+            scrollEventThrottle={32}
             onScrollToIndexFailed={({ index }) => setTimeout(() => listRef.current?.scrollToIndex({ index, animated: false }), 50)}
           />
         )}
@@ -486,15 +520,9 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
 
       <SettingsModal
         visible={settingsOpen}
-        orientation="horizontal"
         fontSize={fontSize}
-        translationLang="none"
         onClose={() => setSettingsOpen(false)}
-        onToggleOrientation={() => {}}
         onChangeFontSize={handleFontChange}
-        onChangeTranslationLang={() => {}}
-        showOrientation={false}
-        showTranslation={false}
       />
     </SafeAreaView>
   );

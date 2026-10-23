@@ -14,15 +14,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getSurahList } from '../services/quranService';
-import { playAudioTrack, subscribeAudioStatus, togglePlayPause, SoundStatus } from '../services/audioService';
+import { getAyahStartRatio, playAudioTrack, subscribeAudioStatus, togglePlayPause, SoundStatus } from '../services/audioService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
 import { saveLastReadPosition } from '../services/bookmarkService';
 import { Surah } from '../types/quran';
 import { FullAudioPlayer, RepeatMode } from '../components/FullAudioPlayer';
+import { AudioTabScreenProps } from '../navigation/types';
 
 const reciterPhoto = require('../assets/serigne_abdou_bara.jpg');
 
-export const AudioPlayerScreen: React.FC = () => {
+export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, navigation }) => {
   const { colors, isDark } = useTheme();
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -62,12 +63,23 @@ export const AudioPlayerScreen: React.FC = () => {
     }
   };
 
-  const handlePlaySurah = async (surah: Surah) => {
+  const handlePlaySurah = async (surah: Surah, ayah = 1) => {
     setCurrentSurah(surah);
-    saveLastReadPosition(surah.number, surah.name, surah.englishName, 1);
+    saveLastReadPosition(surah.number, surah.name, surah.englishName, ayah);
     const audioUrl = await getEffectiveAudioUrl(surah.number);
-    await playAudioTrack(audioUrl);
+    await playAudioTrack(audioUrl, ayah > 1 ? getAyahStartRatio(surah.number, ayah, surah.numberOfAyahs) : 0);
   };
+
+  // « Reprendre la lecture » (accueil) : relance la sourate au verset où l'on s'était arrêté.
+  const resume = route.params;
+  useEffect(() => {
+    if (!resume?.surah || surahs.length === 0) return;
+    const surah = surahs.find((s) => s.number === resume.surah);
+    navigation.setParams({ surah: undefined, ayah: undefined, at: undefined } as never);
+    if (!surah) return;
+    setFullPlayerVisible(true);
+    handlePlaySurah(surah, resume.ayah);
+  }, [resume?.surah, resume?.ayah, resume?.at, surahs]);
 
   const handleNextTrack = () => {
     if (!currentSurah || surahs.length === 0) return;

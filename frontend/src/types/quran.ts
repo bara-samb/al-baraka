@@ -64,7 +64,6 @@ export interface NextPrayerInfo {
   formattedRemaining: string;
 }
 
-export type MushafPageOrientation = 'vertical' | 'horizontal';
 export type TranslationLanguage = 'fr' | 'en' | 'none';
 
 

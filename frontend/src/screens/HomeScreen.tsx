@@ -17,8 +17,7 @@ import {
   LastReadBookmark,
 } from '../services/bookmarkService';
 import { getTodayFormattedDates } from '../services/hijriService';
-import { getArabicFontSize, setArabicFontSize } from '../services/settingsService';
-import { MushafPageOrientation, TranslationLanguage } from '../types/quran';
+import { getArabicFontSize, setArabicFontSize, subscribeFontSizeChange } from '../services/settingsService';
 import { SadaqahBanner } from '../components/SadaqahBanner';
 import { SettingsModal } from '../components/SettingsModal';
 import { ContactModal } from '../components/ContactModal';
@@ -34,9 +33,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isSadaqahOpen, setIsSadaqahOpen] = useState<boolean>(false);
 
-  const [orientation, setOrientation] = useState<MushafPageOrientation>('vertical');
   const [arabicFontSize, setArabicFontSizeState] = useState<number>(24);
-  const [translationLang, setTranslationLang] = useState<TranslationLanguage>('fr');
 
   const todayDates = getTodayFormattedDates();
 
@@ -54,7 +51,11 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
     const unsub = subscribeBookmarkChange((bookmark) => {
       setLastBookmark(bookmark);
     });
-    return () => unsub();
+    const unsubFont = subscribeFontSizeChange(setArabicFontSizeState);
+    return () => {
+      unsub();
+      unsubFont();
+    };
   }, []);
 
   const loadSettings = async () => {
@@ -69,11 +70,10 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
 
   const handleResumeReading = () => {
     if (lastBookmark) {
-      navigation.navigate('Surah', {
-        surahNumber: lastBookmark.surahNumber,
-        surahName: lastBookmark.surahName,
-        englishName: lastBookmark.englishName,
-        initialVerseNumber: lastBookmark.verseNumber,
+      navigation.navigate('AudioTab', {
+        surah: lastBookmark.surahNumber,
+        ayah: lastBookmark.verseNumber,
+        at: Date.now(),
       });
     }
   };
@@ -279,13 +279,9 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
       {/* Settings Modal */}
       <SettingsModal
         visible={isSettingsOpen}
-        orientation={orientation}
         fontSize={arabicFontSize}
-        translationLang={translationLang}
         onClose={() => setIsSettingsOpen(false)}
-        onToggleOrientation={(mode) => setOrientation(mode)}
         onChangeFontSize={handleFontChange}
-        onChangeTranslationLang={(lang) => setTranslationLang(lang)}
       />
 
       {/* Contact Modal */}

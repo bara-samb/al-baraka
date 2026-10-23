@@ -32,7 +32,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ visible, onClose }) 
   };
 
   const handleEmail = () => {
-    Linking.openURL('mailto:contact@albaraka.sn?subject=Contact%20AL%20BARAKA');
+    Linking.openURL('mailto:mamebara08@gmail.com?subject=Contact%20AL%20BARAKA');
   };
 
   return (
@@ -98,7 +98,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ visible, onClose }) 
                 <Ionicons name="mail" size={22} color="#FFFFFF" style={{ marginRight: 12 }} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.contactBtnTitle}>Envoyer un Email</Text>
-                  <Text style={styles.contactBtnSub}>contact@albaraka.sn</Text>
+                  <Text style={styles.contactBtnSub}>mamebara08@gmail.com</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
               </TouchableOpacity>
@@ -130,6 +130,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
+    maxWidth: 520,
     maxHeight: '88%',
     borderRadius: 22,
     borderWidth: 1,

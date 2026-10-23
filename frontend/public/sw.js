@@ -10,7 +10,7 @@
  *
  * Incrémenter CACHE_VERSION pour purger les anciens caches.
  */
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v3';
 const APP_CACHE = `albaraka-app-${CACHE_VERSION}`;
 const API_CACHE = `albaraka-api-${CACHE_VERSION}`;
 

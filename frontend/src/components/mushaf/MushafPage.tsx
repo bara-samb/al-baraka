@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { MushafPalette } from './mushafTheme';
-import { AyahRosette, BookmarkRibbon, OrnamentDivider, PageFrame, SurahBanner } from './Ornaments';
+import { BookmarkRibbon, OrnamentDivider, PageFrame, SurahBanner } from './Ornaments';
 import {
   MUSHAF_PAGES,
   MushafVerse,
@@ -32,7 +32,31 @@ interface MushafPageProps {
 // de versets d'une même sourate.
 type PageGroup = { kind: 'header'; surah: number } | { kind: 'text'; verses: MushafVerse[] };
 
-const MIN_SCALE = 0.55;
+const MIN_SCALE = 0.3;
+
+// Échelle retenue pour chaque page à une taille donnée : revenir sur une page déjà vue
+// l'affiche aussitôt, sans la remesurer.
+const fittedScales = new Map<string, number>();
+
+/** Numéro de verset : simple pastille (sans SVG, bien plus légère à afficher par dizaines). */
+const VerseMarker: React.FC<{ number: number; size: number; palette: MushafPalette }> = ({ number, size, palette }) => (
+  <View
+    style={{
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      borderWidth: 1,
+      borderColor: palette.gold,
+      alignItems: 'center',
+      justifyContent: 'center',
+      transform: [{ translateY: size * 0.18 }],
+    }}
+  >
+    <Text allowFontScaling={false} style={{ color: palette.title, fontSize: size * (number > 99 ? 0.38 : 0.48), fontWeight: 'bold' }}>
+      {toArabicDigits(number)}
+    </Text>
+  </View>
+);
 
 const MushafPageComponent: React.FC<MushafPageProps> = ({
   page,
@@ -48,11 +72,14 @@ const MushafPageComponent: React.FC<MushafPageProps> = ({
   onBackgroundPress,
 }) => {
   const verses = MUSHAF_PAGES[page - 1];
-  // Échelle du texte, réduite jusqu'à ce que la page tienne entièrement à l'écran.
-  const [scale, setScale] = useState(1);
+  // Échelle du texte, réduite jusqu'à ce que la page tienne entièrement à l'écran : la
+  // lecture se fait page par page, en glissant horizontalement, sans jamais défiler vers le bas.
   const [areaHeight, setAreaHeight] = useState(0);
-
-  useEffect(() => setScale(1), [fontSize, areaHeight]);
+  const fitKey = `${page}:${fontSize}:${width}:${areaHeight}`;
+  const [fit, setFit] = useState<{ key: string; scale: number; done: boolean }>({ key: '', scale: 1, done: false });
+  const cached = fittedScales.get(fitKey);
+  const current = cached !== undefined ? { scale: cached, done: true } : fit.key === fitKey ? fit : { scale: 1, done: false };
+  const scale = current.scale;
 
   const groups = useMemo<PageGroup[]>(() => {
     const result: PageGroup[] = [];
@@ -67,14 +94,19 @@ const MushafPageComponent: React.FC<MushafPageProps> = ({
 
   const first = verses[0];
   const size = fontSize * scale;
-  const rosetteSize = Math.round(size * 1.15);
+  const markerSize = Math.round(size * 0.95);
   const isOpeningPage = page <= 2;
 
-  const handleContentSize = (_: number, contentHeight: number) => {
-    if (!areaHeight || contentHeight <= areaHeight || scale <= MIN_SCALE) return;
+  const handleContentLayout = (contentHeight: number) => {
+    if (!areaHeight || current.done) return;
+    if (contentHeight <= areaHeight || scale <= MIN_SCALE) {
+      fittedScales.set(fitKey, scale);
+      setFit({ key: fitKey, scale, done: true });
+      return;
+    }
     // La surface du texte varie comme le carré de la taille de police.
     const next = Math.max(MIN_SCALE, scale * Math.sqrt(areaHeight / contentHeight) * 0.97);
-    if (scale - next > 0.01) setScale(next);
+    setFit({ key: fitKey, scale: next, done: false });
   };
 
   return (
@@ -92,48 +124,48 @@ const MushafPageComponent: React.FC<MushafPageProps> = ({
           </Text>
         </View>
 
-        <ScrollView
-          style={styles.area}
-          contentContainerStyle={[styles.areaContent, isOpeningPage && styles.areaContentCentered]}
-          onLayout={(e) => setAreaHeight(e.nativeEvent.layout.height)}
-          onContentSizeChange={handleContentSize}
-          showsVerticalScrollIndicator={false}
-        >
-          {groups.map((g) =>
-            g.kind === 'header' ? (
-              <View key={`h${g.surah}`} style={{ marginTop: 4 }}>
-                <SurahBanner
-                  name={`سورة ${surahNameAr(g.surah)}`}
-                  subtitle={surahNameLatin(g.surah).toUpperCase()}
-                  ayahCount={surahVerseCount(g.surah)}
-                  revelationType={revelationTypes[g.surah] ?? 'Meccan'}
-                  palette={p}
-                />
-                {g.surah !== 9 && (
-                  <Text style={[styles.basmala, { color: p.title, fontSize: size, lineHeight: size * 1.9 }]}>
-                    {WARSH_BASMALA}
-                  </Text>
-                )}
-              </View>
-            ) : (
-              <Text
-                key={`t${g.verses[0].surah}:${g.verses[0].ayah}`}
-                style={[styles.arabic, { color: p.ink, fontSize: size, lineHeight: size * 2.05 }, isOpeningPage && styles.arabicCentered]}
-              >
-                {g.verses.map((v) => {
-                  const key = `${v.surah}:${v.ayah}`;
-                  const highlight = key === selectedKey ? p.selected : key === recitedKey ? p.playing : undefined;
-                  return (
-                    <Text key={key} onPress={() => onVersePress(v)} style={highlight ? { backgroundColor: highlight } : undefined}>
-                      {v.text}{' '}
-                      <AyahRosette number={v.ayah} size={rosetteSize} palette={p} />{' '}
+        <View style={styles.area} onLayout={(e) => setAreaHeight(Math.floor(e.nativeEvent.layout.height))}>
+          <View
+            key={`${fitKey}:${scale}`}
+            style={[styles.areaContent, isOpeningPage && styles.areaContentCentered, { opacity: current.done ? 1 : 0 }]}
+            onLayout={(e) => handleContentLayout(e.nativeEvent.layout.height)}
+          >
+            {groups.map((g) =>
+              g.kind === 'header' ? (
+                <View key={`h${g.surah}`} style={{ marginTop: 4 }}>
+                  <SurahBanner
+                    name={`سورة ${surahNameAr(g.surah)}`}
+                    subtitle={surahNameLatin(g.surah).toUpperCase()}
+                    ayahCount={surahVerseCount(g.surah)}
+                    revelationType={revelationTypes[g.surah] ?? 'Meccan'}
+                    palette={p}
+                  />
+                  {g.surah !== 9 && (
+                    <Text style={[styles.basmala, { color: p.title, fontSize: size, lineHeight: size * 1.9 }]}>
+                      {WARSH_BASMALA}
                     </Text>
-                  );
-                })}
-              </Text>
-            )
-          )}
-        </ScrollView>
+                  )}
+                </View>
+              ) : (
+                <Text
+                  key={`t${g.verses[0].surah}:${g.verses[0].ayah}`}
+                  style={[styles.arabic, { color: p.ink, fontSize: size, lineHeight: size * 2.05 }, isOpeningPage && styles.arabicCentered]}
+                >
+                  {g.verses.map((v) => {
+                    const key = `${v.surah}:${v.ayah}`;
+                    const highlight = key === selectedKey ? p.selected : key === recitedKey ? p.playing : undefined;
+                    return (
+                      <Text key={key} onPress={() => onVersePress(v)} style={highlight ? { backgroundColor: highlight } : undefined}>
+                        {v.text}{' '}
+                        <VerseMarker number={v.ayah} size={markerSize} palette={p} />{' '}
+                      </Text>
+                    );
+                  })}
+                </Text>
+              )
+            )}
+          </View>
+        </View>
 
         <View style={styles.pageFooter}>
           <OrnamentDivider palette={p} width={44} />
@@ -178,10 +210,10 @@ const styles = StyleSheet.create({
   },
   area: {
     flex: 1,
+    overflow: 'hidden',
+    justifyContent: 'center',
   },
   areaContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
     paddingVertical: 4,
   },
   areaContentCentered: {

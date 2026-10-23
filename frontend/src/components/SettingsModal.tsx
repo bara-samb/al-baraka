@@ -10,33 +10,20 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { MushafPageOrientation, TranslationLanguage } from '../types/quran';
 import { getAzanEnabled, setAzanEnabled } from '../services/azanService';
 
 interface SettingsModalProps {
   visible: boolean;
-  orientation: MushafPageOrientation;
   fontSize: number;
-  translationLang: TranslationLanguage;
   onClose: () => void;
-  onToggleOrientation: (orientation: MushafPageOrientation) => void;
   onChangeFontSize: (delta: number) => void;
-  onChangeTranslationLang: (lang: TranslationLanguage) => void;
-  showOrientation?: boolean;
-  showTranslation?: boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   visible,
-  orientation,
   fontSize,
-  translationLang,
   onClose,
-  onToggleOrientation,
   onChangeFontSize,
-  onChangeTranslationLang,
-  showOrientation = true,
-  showTranslation = true,
 }) => {
   const { colors, isDark, toggleTheme } = useTheme();
   const [azanOn, setAzanOn] = useState<boolean>(false);
@@ -72,168 +59,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               Personnalisez votre expérience de lecture et d'écoute
             </Text>
 
-            {/* Section 1: Orientation du Mushaf */}
-            {showOrientation && (
+            {/* Taille du texte arabe */}
             <View style={[styles.settingSection, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-                Sens de défilement des pages du Mushaf
-              </Text>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Taille du texte arabe</Text>
               <Text style={[styles.sectionSub, { color: colors.textSecondary }]}>
-                Choisissez le mode d'enfilage des pages
+                Dans le Mushaf, le texte est réduit si nécessaire pour que toute la page tienne à l'écran.
               </Text>
-
-              <View style={styles.orientationOptionRow}>
-                {/* Mode Vertical */}
-                <TouchableOpacity
-                  style={[
-                    styles.orientationOptionBtn,
-                    {
-                      backgroundColor: orientation === 'vertical' ? colors.gold : colors.bgPrimary,
-                      borderColor: orientation === 'vertical' ? colors.gold : colors.border,
-                    },
-                  ]}
-                  onPress={() => onToggleOrientation('vertical')}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name="swap-vertical"
-                    size={22}
-                    color={orientation === 'vertical' ? '#0F172A' : colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.optionLabel,
-                      { color: orientation === 'vertical' ? '#0F172A' : colors.textPrimary },
-                    ]}
-                  >
-                    Vertical ↕
-                  </Text>
-                  <Text
-                    style={[
-                      styles.optionSubLabel,
-                      { color: orientation === 'vertical' ? '#0F172A' : colors.textSecondary },
-                    ]}
-                  >
-                    Défilement continu
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Mode Horizontal */}
-                <TouchableOpacity
-                  style={[
-                    styles.orientationOptionBtn,
-                    {
-                      backgroundColor: orientation === 'horizontal' ? colors.gold : colors.bgPrimary,
-                      borderColor: orientation === 'horizontal' ? colors.gold : colors.border,
-                    },
-                  ]}
-                  onPress={() => onToggleOrientation('horizontal')}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name="swap-horizontal"
-                    size={22}
-                    color={orientation === 'horizontal' ? '#0F172A' : colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.optionLabel,
-                      { color: orientation === 'horizontal' ? '#0F172A' : colors.textPrimary },
-                    ]}
-                  >
-                    Horizontal ↔
-                  </Text>
-                  <Text
-                    style={[
-                      styles.optionSubLabel,
-                      { color: orientation === 'horizontal' ? '#0F172A' : colors.textSecondary },
-                    ]}
-                  >
-                    Mode Livre (Swipe)
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            )}
-
-            {/* Section 2: Langue de Traduction */}
-            {showTranslation && (
-            <View style={[styles.settingSection, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Langue de Traduction</Text>
-              <Text style={[styles.sectionSub, { color: colors.textSecondary }]}>
-                Choisissez la langue de traduction sous le texte arabe
-              </Text>
-
-              <View style={styles.langOptionRow}>
-                {/* Français */}
-                <TouchableOpacity
-                  style={[
-                    styles.langBtn,
-                    {
-                      backgroundColor: translationLang === 'fr' ? colors.gold : colors.bgPrimary,
-                      borderColor: translationLang === 'fr' ? colors.gold : colors.border,
-                    },
-                  ]}
-                  onPress={() => onChangeTranslationLang('fr')}
-                >
-                  <Text
-                    style={[
-                      styles.langBtnText,
-                      { color: translationLang === 'fr' ? '#0F172A' : colors.textPrimary },
-                    ]}
-                  >
-                    🇫🇷 Français
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Anglais */}
-                <TouchableOpacity
-                  style={[
-                    styles.langBtn,
-                    {
-                      backgroundColor: translationLang === 'en' ? colors.gold : colors.bgPrimary,
-                      borderColor: translationLang === 'en' ? colors.gold : colors.border,
-                    },
-                  ]}
-                  onPress={() => onChangeTranslationLang('en')}
-                >
-                  <Text
-                    style={[
-                      styles.langBtnText,
-                      { color: translationLang === 'en' ? '#0F172A' : colors.textPrimary },
-                    ]}
-                  >
-                    🇬🇧 English
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Désactivé */}
-                <TouchableOpacity
-                  style={[
-                    styles.langBtn,
-                    {
-                      backgroundColor: translationLang === 'none' ? colors.gold : colors.bgPrimary,
-                      borderColor: translationLang === 'none' ? colors.gold : colors.border,
-                    },
-                  ]}
-                  onPress={() => onChangeTranslationLang('none')}
-                >
-                  <Text
-                    style={[
-                      styles.langBtnText,
-                      { color: translationLang === 'none' ? '#0F172A' : colors.textPrimary },
-                    ]}
-                  >
-                    🚫 Aucune
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            )}
-
-            {/* Section 3: Taille du texte Arabe */}
-            <View style={[styles.settingSection, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Taille de la police Arabe</Text>
               <View style={styles.fontControlsRow}>
                 <TouchableOpacity
                   style={[styles.fontBtn, { backgroundColor: colors.bgPrimary, borderColor: colors.border }]}
@@ -242,7 +73,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <Text style={[styles.fontBtnText, { color: colors.textPrimary }]}>A-</Text>
                 </TouchableOpacity>
 
-                <Text style={[styles.fontSizeVal, { color: colors.gold }]}>{fontSize} pt</Text>
+                <Text style={[styles.fontSizeVal, { color: colors.gold }]}>{fontSize}</Text>
 
                 <TouchableOpacity
                   style={[styles.fontBtn, { backgroundColor: colors.bgPrimary, borderColor: colors.border }]}
@@ -253,7 +84,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </View>
             </View>
 
-            {/* Section 4: Mode Sombre */}
+            {/* Mode sombre */}
             <View style={[styles.settingSectionRow, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
               <View style={{ flex: 1, marginRight: 10 }}>
                 <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Mode Sombre</Text>
@@ -267,12 +98,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </View>
 
-            {/* Section 5: Azan automatique */}
+            {/* Azan automatique */}
             <View style={[styles.settingSectionRow, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
               <View style={{ flex: 1, marginRight: 10 }}>
                 <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Azan automatique</Text>
                 <Text style={[styles.sectionSub, { color: colors.textSecondary }]}>
-                  Joue l'azan de la Grande Mosquée de Touba à chaque heure de prière
+                  Joue l'azan de la Grande Mosquée de Touba à chaque heure de prière, tant que l'application est ouverte
                 </Text>
               </View>
               <Switch
@@ -303,6 +134,7 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     width: '100%',
+    maxWidth: 520,
     maxHeight: '90%',
     borderRadius: 22,
     borderWidth: 1,
@@ -355,46 +187,6 @@ const styles = StyleSheet.create({
   sectionSub: {
     fontSize: 11,
     marginTop: 2,
-  },
-  orientationOptionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 10,
-  },
-  orientationOptionBtn: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1.5,
-  },
-  optionLabel: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    marginTop: 6,
-  },
-  optionSubLabel: {
-    fontSize: 10,
-    marginTop: 2,
-  },
-  langOptionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 6,
-  },
-  langBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  langBtnText: {
-    fontSize: 12,
-    fontWeight: 'bold',
   },
   fontControlsRow: {
     flexDirection: 'row',

@@ -127,6 +127,8 @@ export const BottomTabNavigator: React.FC = () => {
   return (
     <Tab.Navigator
       initialRouteName="HomeTab"
+      // Retour : revient à l'onglet précédent (puis à l'accueil) au lieu de quitter l'app.
+      backBehavior="history"
       tabBar={(props) => <CustomBottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,

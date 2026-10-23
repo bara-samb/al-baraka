@@ -3,7 +3,8 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
 export type MainTabParamList = {
   HomeTab: undefined;
-  AudioTab: undefined;
+  // Sourate et verset à reprendre (« Reprendre la lecture ») ; `at` distingue deux demandes identiques.
+  AudioTab: { surah: number; ayah: number; at?: number } | undefined;
   MushafTab: undefined;
   TasbihTab: undefined;
   SadaqahTab: undefined;
