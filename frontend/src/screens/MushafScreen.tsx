@@ -565,6 +565,8 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 34,
     paddingTop: 2,
+    // La police Warsh déborde légèrement de sa boîte : évite de rogner la première lettre.
+    paddingHorizontal: 6,
   },
   topSubRow: {
     flexDirection: 'row',

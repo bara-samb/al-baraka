@@ -18,6 +18,15 @@
         "backgroundColor": "#0F172A"
       },
       "package": "com.barasamb.albaraka"
+    },
+    "web": {
+      "name": "AL BARAKA",
+      "shortName": "AL BARAKA",
+      "lang": "fr",
+      "description": "Le Saint Coran en riwaya Warsh, récité par Serigne Aboul Baraka Mbacké.",
+      "themeColor": "#0B3A2B",
+      "backgroundColor": "#0B3A2B",
+      "favicon": "./public/icons/favicon-48.png"
     }
   }
 }

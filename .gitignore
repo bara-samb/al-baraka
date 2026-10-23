@@ -15,6 +15,9 @@ frontend/android/
 frontend/ios/
 frontend/.expo/
 
+# Export web (PWA) généré par `npm run build:web`
+frontend/dist/
+
 # Env files (never commit secrets / ADMIN_API_KEY)
 .env
 .env.local

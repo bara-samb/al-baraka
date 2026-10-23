@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>%WEB_TITLE%</title>
+
+    <!-- PWA : installation sur l'écran d'accueil + fonctionnement hors ligne (voir sw.js) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="AL BARAKA" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+        background-color: #0b3a2b;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      Activez JavaScript pour utiliser AL BARAKA.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+
+    <script>
+      // Le service worker n'est enregistré que pour l'app exportée (`npm run build:web`) :
+      // en développement, il mettrait en cache les bundles et masquerait les modifications.
+      window.addEventListener('load', function () {
+        var isDevBundle = Array.prototype.some.call(document.scripts, function (s) {
+          return s.src.indexOf('dev=true') !== -1;
+        });
+        if ('serviceWorker' in navigator && !isDevBundle) {
+          navigator.serviceWorker.register('/sw.js').catch(function (e) {
+            console.warn('Service worker non enregistré :', e);
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
