@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Vibration,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +18,12 @@ import { CustomTargetModal } from '../components/CustomTargetModal';
 import { TargetReachedModal } from '../components/TargetReachedModal';
 import { saveTasbihIncrement } from '../services/tasbihService';
 
-const TARGET_PRESETS = [11, 33, 99, 100, 313];
+const TARGET_PRESETS = [33, 99, 100];
+
+// Objectif atteint : trois longues vibrations (~3 s), à sentir même sans regarder l'écran.
+// Android lit [attente, vibration, attente, …] ; le web (navigator.vibrate) lit
+// [vibration, pause, …] ; iOS fait une vibration fixe (~0,4 s) après chaque attente.
+const TARGET_VIBRATION = Platform.OS === 'web' ? [800, 250, 800, 250, 1200] : [0, 800, 250, 800, 250, 1200];
 
 export const TasbihScreen: React.FC = () => {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -42,15 +48,9 @@ export const TasbihScreen: React.FC = () => {
     setCount(nextCount);
 
     if (isRoundComplete) {
-      // Vibration systématique à l'objectif atteint (pattern distinct, plus long) : on ne
-      // se fie pas qu'aux haptics, qui peuvent échouer silencieusement (sans lever d'erreur)
-      // sur certaines plateformes (ex: web).
-      Vibration.vibrate([0, 200, 100, 300]);
-      try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch {
-        // déjà couvert par Vibration.vibrate ci-dessus
-      }
+      // Pas d'haptique ici : sur le web, elle passe aussi par navigator.vibrate et
+      // remplacerait la longue vibration par une impulsion brève.
+      Vibration.vibrate(TARGET_VIBRATION);
       setTimeout(() => {
         setIsReachedModalOpen(true);
       }, 100);
@@ -107,7 +107,7 @@ export const TasbihScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Sélecteur de Nombres Cibles (11, 33, 99, 100, 129, 313, 1000, Custom) */}
+        {/* Sélecteur de Nombres Cibles (33, 99, 100, Custom) */}
         <View
           style={[
             styles.card,
@@ -296,7 +296,10 @@ export const TasbihScreen: React.FC = () => {
       <TargetReachedModal
         visible={isReachedModalOpen}
         targetCount={target}
-        onClose={() => setIsReachedModalOpen(false)}
+        onClose={() => {
+          Vibration.cancel();
+          setIsReachedModalOpen(false);
+        }}
         onReset={() => {
           setCount(0);
           setIsReachedModalOpen(false);

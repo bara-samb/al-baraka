@@ -55,7 +55,7 @@ export const CustomTargetModal: React.FC<CustomTargetModalProps> = ({
           </View>
 
           <Text style={[styles.description, { color: colors.textSecondary }]}>
-            Entrez le nombre exact de zikrs que vous désirez accomplir (ex: 33, 99, 500, 1000...) :
+            Entrez le nombre exact de zikrs que vous désirez accomplir (ex : 33, 99, 500...) :
           </Text>
 
           <TextInput

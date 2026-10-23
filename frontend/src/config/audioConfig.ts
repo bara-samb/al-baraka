@@ -54,10 +54,3 @@ export const getAudioUrlForSurah = (surahNumber: number): string => {
   const paddedNumber = String(surahNumber).padStart(3, '0');
   return `${AUDIO_BASE_URL}${paddedNumber}.mp3`;
 };
-
-/**
- * URL du fichier audio de l'azan de la Grande Mosquée de Touba, hébergé par le backend
- * (déposé manuellement ou via /admin, voir backend/server.ts). Peut ne pas exister
- * tant que le fichier n'a pas été fourni — playAzan gère l'échec de chargement.
- */
-export const getAzanAudioUrl = (): string => `${SERVER_ROOT_URL}/audios/azan/touba.mp3`;

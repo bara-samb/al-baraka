@@ -1,9 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { View, ActivityIndicator } from 'react-native';
-import { startAzanWatcher } from './src/services/azanService';
 
 export default function App() {
   // fontError : sur le web, certains navigateurs (sanitizer de police Chrome) peuvent
@@ -13,11 +12,6 @@ export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     'KFGQPC_Warsh': require('./assets/fonts/KFGQPC_Warsh.otf'),
   });
-
-  useEffect(() => {
-    const stopWatcher = startAzanWatcher();
-    return stopWatcher;
-  }, []);
 
   if (!fontsLoaded && !fontError) {
     return (

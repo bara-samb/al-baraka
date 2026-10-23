@@ -46,24 +46,6 @@ export interface SearchOccurrenceStats {
   results: SearchOccurrenceItem[];
 }
 
-export interface PrayerTimings {
-  Fajr: string;
-  Sunrise: string;
-  Dhuhr: string;
-  Asr: string;
-  Sunset: string;
-  Maghrib: string;
-  Isha: string;
-  [key: string]: string;
-}
-
-export interface NextPrayerInfo {
-  name: string;
-  time: string;
-  remainingMs: number;
-  formattedRemaining: string;
-}
-
 export type TranslationLanguage = 'fr' | 'en' | 'none';
 
 
