@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, SafeAreaView, ActivityIndicator } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, SafeAreaView, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DIGITS_FONT, MushafPalette } from './mushafTheme';
 import { OrnamentDivider } from './Ornaments';
+import { ArabicKeyboard } from './ArabicKeyboard';
 import { MushafVerse, surahNameAr, surahNameLatin, toArabicDigits } from '../../services/warshMushafService';
 import { SearchResult, VerseMatch, searchMushaf } from '../../services/mushafSearch';
 
@@ -15,11 +16,17 @@ interface MushafSearchModalProps {
 
 const SEARCH_DELAY_MS = 300;
 
+// Clavier arabe à l'écran ouvert d'office sur ordinateur (souris) ; sur téléphone, le
+// clavier du système suffit et le nôtre s'ouvre à la demande.
+const hasMouse = () =>
+  Platform.OS === 'web' && typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: fine)').matches;
+
 /** Recherche d'un mot arabe dans tout le Coran : versets trouvés (mot surligné) et nombre d'occurrences. */
 export const MushafSearchModal: React.FC<MushafSearchModalProps> = ({ visible, palette: p, onClose, onSelectVerse }) => {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
   const [searching, setSearching] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(hasMouse);
 
   useEffect(() => {
     const q = query.trim();
@@ -106,20 +113,28 @@ export const MushafSearchModal: React.FC<MushafSearchModalProps> = ({ visible, p
         <OrnamentDivider palette={p} />
 
         <View style={[styles.searchBox, { backgroundColor: p.chrome, borderColor: p.goldSoft }]}>
+          <TouchableOpacity
+            onPress={() => setKeyboardOpen((open) => !open)}
+            hitSlop={8}
+            accessibilityLabel={keyboardOpen ? 'Masquer le clavier arabe' : 'Afficher le clavier arabe'}
+          >
+            <Ionicons name={keyboardOpen ? 'keypad' : 'keypad-outline'} size={19} color={keyboardOpen ? p.gold : p.muted} />
+          </TouchableOpacity>
           {query ? (
             <TouchableOpacity onPress={() => setQuery('')} hitSlop={8}>
               <Ionicons name="close-circle" size={18} color={p.muted} />
             </TouchableOpacity>
-          ) : (
-            <View style={{ width: 18 }} />
-          )}
+          ) : null}
           <TextInput
             style={[styles.searchInput, { color: p.ink }]}
             placeholder="اكتب كلمة… مثال : الرحمن"
             placeholderTextColor={p.muted}
             value={query}
             onChangeText={setQuery}
-            autoFocus
+            autoFocus={!keyboardOpen}
+            // Clavier à l'écran ouvert : le clavier du téléphone ne s'affiche pas par-dessus.
+            showSoftInputOnFocus={!keyboardOpen}
+            inputMode={keyboardOpen ? 'none' : 'text'}
             autoCorrect={false}
             returnKeyType="search"
           />
@@ -147,6 +162,15 @@ export const MushafSearchModal: React.FC<MushafSearchModalProps> = ({ visible, p
           initialNumToRender={8}
           windowSize={7}
         />
+
+        {keyboardOpen && (
+          <ArabicKeyboard
+            palette={p}
+            onKey={(letter) => setQuery((q) => q + letter)}
+            onBackspace={() => setQuery((q) => q.slice(0, -1))}
+            onClear={() => setQuery('')}
+          />
+        )}
       </SafeAreaView>
     </Modal>
   );
