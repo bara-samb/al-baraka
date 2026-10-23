@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Surah, Ayah } from '../types/quran';
+import { ensureWarshNumbering } from './numberingMigration';
 
 export interface FavoriteAyahItem {
   ayah: Ayah;
@@ -73,6 +74,7 @@ export const toggleFavoriteSurah = async (surah: Surah): Promise<boolean> => {
  * Récupère tous les versets favoris
  */
 export const getFavoriteAyahs = async (): Promise<FavoriteAyahItem[]> => {
+  await ensureWarshNumbering();
   try {
     const json = await AsyncStorage.getItem(FAVORITE_AYAHS_KEY);
     return json ? JSON.parse(json) : [];

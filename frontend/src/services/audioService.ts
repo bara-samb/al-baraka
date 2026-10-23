@@ -6,8 +6,9 @@ interface AyahTimingEntry {
   startSeconds: number[];
 }
 
-// Timestamps par verset générés par détection automatique des pauses du récitateur
-// (voir backend/scripts/generate-ayah-timings.js). Clé = numéro de sourate (string).
+// Timestamps par verset (numérotation du Mushaf Warsh) générés par détection des pauses du
+// récitateur alignée sur le texte (voir backend/scripts/generate-ayah-timings.js).
+// Clé = numéro de sourate (string).
 const AYAH_TIMINGS = ayahTimingsData as Record<string, AyahTimingEntry>;
 
 export interface SoundStatus {
@@ -38,6 +39,26 @@ export const getAyahBoundsSeconds = (
   if (!timing || startSec === undefined) return null;
   const endSec = timing.startSeconds[numberInSurah] ?? timing.totalDuration;
   return { startSec, endSec };
+};
+
+/**
+ * Numéro du verset en cours de récitation à une position donnée du fichier de la sourate
+ * (pour surligner le verset pendant la lecture). null si pas de minutage pour la sourate.
+ */
+export const getAyahAtPosition = (
+  surahNumber: number,
+  positionSec: number
+): number | null => {
+  const starts = AYAH_TIMINGS[String(surahNumber)]?.startSeconds;
+  if (!starts || starts.length === 0) return null;
+  let lo = 0;
+  let hi = starts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (starts[mid] <= positionSec) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo + 1;
 };
 
 /**

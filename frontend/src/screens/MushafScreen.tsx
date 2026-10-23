@@ -1,826 +1,703 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   FlatList,
-  ScrollView,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  ActivityIndicator,
-  TextInput,
-  Dimensions,
+  Animated,
+  Modal,
+  Pressable,
+  Share,
+  ViewToken,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../context/ThemeContext';
-import { getSurahList, getSurahDetails, WARSH_BASMALA, shouldShowBasmalaHeader } from '../services/quranService';
+import { getSurahList } from '../services/quranService';
 import { getArabicFontSize, setArabicFontSize } from '../services/settingsService';
-import { playAyahOnly } from '../services/audioService';
+import {
+  playAyahOnly,
+  playAudioTrack,
+  togglePlayPause,
+  stopAudioTrack,
+  subscribeAudioStatus,
+  getAyahAtPosition,
+  getAyahStartRatio,
+} from '../services/audioService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
-import { saveLastReadPosition } from '../services/bookmarkService';
-import { Surah, SurahDetail, Ayah, MushafPageOrientation, TranslationLanguage } from '../types/quran';
-import { VerseModal } from '../components/VerseModal';
+import {
+  saveLastReadPosition,
+  getLastReadPosition,
+  getMushafBookmark,
+  saveMushafBookmark,
+  clearMushafBookmark,
+  getMushafLastPage,
+  saveMushafLastPage,
+  MushafBookmark,
+} from '../services/bookmarkService';
+import {
+  MUSHAF_PAGES,
+  MUSHAF_PAGE_COUNT,
+  MushafVerse,
+  getMushafVerse,
+  hizbLabelAr,
+  juzNameAr,
+  pageOfVerse,
+  surahNameAr,
+  surahNameLatin,
+  surahVerseCount,
+  toArabicDigits,
+} from '../services/warshMushafService';
 import { SettingsModal } from '../components/SettingsModal';
-import { AudioPlayerBar } from '../components/AudioPlayerBar';
+import { MushafIndexModal, MushafIndexTab } from '../components/mushaf/MushafIndexModal';
+import { MushafPage } from '../components/mushaf/MushafPage';
+import { MushafPalette, mushafDark, mushafLight } from '../components/mushaf/mushafTheme';
 import { MushafTabScreenProps } from '../navigation/types';
 
-// Point de départ réel (sourate, verset) de chacun des 30 Juz' du Coran
-const JUZ_START_POINTS: Array<{ surah: number; ayah: number }> = [
-  { surah: 1, ayah: 1 },
-  { surah: 2, ayah: 142 },
-  { surah: 2, ayah: 253 },
-  { surah: 3, ayah: 92 },
-  { surah: 4, ayah: 24 },
-  { surah: 4, ayah: 148 },
-  { surah: 5, ayah: 82 },
-  { surah: 6, ayah: 111 },
-  { surah: 7, ayah: 88 },
-  { surah: 8, ayah: 41 },
-  { surah: 9, ayah: 93 },
-  { surah: 11, ayah: 6 },
-  { surah: 12, ayah: 53 },
-  { surah: 15, ayah: 1 },
-  { surah: 17, ayah: 1 },
-  { surah: 18, ayah: 75 },
-  { surah: 21, ayah: 1 },
-  { surah: 23, ayah: 1 },
-  { surah: 25, ayah: 21 },
-  { surah: 27, ayah: 56 },
-  { surah: 29, ayah: 46 },
-  { surah: 33, ayah: 31 },
-  { surah: 36, ayah: 28 },
-  { surah: 39, ayah: 32 },
-  { surah: 41, ayah: 47 },
-  { surah: 46, ayah: 1 },
-  { surah: 51, ayah: 31 },
-  { surah: 58, ayah: 1 },
-  { surah: 67, ayah: 1 },
-  { surah: 78, ayah: 1 },
-];
+const PAGE_NUMBERS = Array.from({ length: MUSHAF_PAGE_COUNT }, (_, i) => i + 1);
+// Barre d'onglets flottante (bottom 12 + hauteur 68) : le Mushaf s'arrête au-dessus.
+const TAB_BAR_SPACE = 84;
+const VIEWABILITY = { itemVisiblePercentThreshold: 60 };
 
-const JUZ_LIST = Array.from({ length: 30 }, (_, i) => ({
-  juzNumber: i + 1,
-  titleFr: `Juz' ${i + 1}`,
-  titleAr: `الجزء ${i + 1}`,
-  startSurah: JUZ_START_POINTS[i].surah,
-  startAyah: JUZ_START_POINTS[i].ayah,
-}));
+const verseKey = (v: { surah: number; ayah: number }) => `${v.surah}:${v.ayah}`;
 
-const toArabicDigits = (num: number): string => {
-  const digits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-  return num
-    .toString()
-    .split('')
-    .map((d) => digits[parseInt(d, 10)])
-    .join('');
-};
+export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
+  const { isDark } = useTheme();
+  const p = isDark ? mushafDark : mushafLight;
+  const { width } = useWindowDimensions();
 
-export const MushafScreen: React.FC<MushafTabScreenProps> = ({ navigation }) => {
-  const { colors, isDark } = useTheme();
-  const [surahs, setSurahs] = useState<Surah[]>([]);
-  const [currentSurahNumber, setCurrentSurahNumber] = useState<number>(1);
-  const [surahDetail, setSurahDetail] = useState<SurahDetail | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [arabicFontSize, setArabicFontSizeState] = useState<number>(24);
-  const [translationLang, setTranslationLang] = useState<TranslationLanguage>('fr');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'sourates' | 'juz'>('sourates');
+  const [page, setPage] = useState<number | null>(null);
+  const [pageHeight, setPageHeight] = useState(0);
+  const [fontSize, setFontSize] = useState(24);
+  const [revelationTypes, setRevelationTypes] = useState<Record<number, 'Meccan' | 'Medinan'>>({});
+  const [bookmark, setBookmark] = useState<MushafBookmark | null>(null);
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const [indexVisible, setIndexVisible] = useState(false);
+  const [indexTab, setIndexTab] = useState<MushafIndexTab>('surahs');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sheetVerse, setSheetVerse] = useState<MushafVerse | null>(null);
 
-  // Parameter for Vertical vs Horizontal paging mode!
-  const [orientation, setOrientation] = useState<MushafPageOrientation>('vertical');
-  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  // Récitation lancée depuis le Mushaf : sourate jouée + verset en cours (surligné).
+  const [playbackSurah, setPlaybackSurah] = useState<number | null>(null);
+  const [recitedAyah, setRecitedAyah] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playbackSurahRef = useRef<number | null>(null);
 
-  const [selectedAyah, setSelectedAyah] = useState<Ayah | null>(null);
-  const [verseModalVisible, setVerseModalVisible] = useState<boolean>(false);
-  const [playbackTitle, setPlaybackTitle] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chromeAnim = useRef(new Animated.Value(1)).current;
 
-  const ayahListRef = useRef<FlatList>(null);
-  const pendingScrollAyahRef = useRef<number | null>(null);
+  const listRef = useRef<FlatList<number>>(null);
+  const pageRef = useRef<number | null>(null);
+
+  // ---------- Chargement ----------
 
   useEffect(() => {
-    fetchSurahList();
-    loadFontSize();
+    (async () => {
+      getArabicFontSize().then(setFontSize);
+      getMushafBookmark().then(setBookmark);
+      getSurahList()
+        .then((list) => setRevelationTypes(Object.fromEntries(list.map((s) => [s.number, s.revelationType]))))
+        .catch(() => {});
+      // Rouvre le Mushaf à la dernière page lue (ou au début de la dernière sourate lue).
+      const lastPage = await getMushafLastPage();
+      if (lastPage) {
+        setPage(lastPage);
+        return;
+      }
+      const lastRead = await getLastReadPosition();
+      setPage(lastRead ? pageOfVerse(lastRead.surahNumber, 1) : 1);
+    })();
   }, []);
 
   useEffect(() => {
-    loadSurahContent(currentSurahNumber, translationLang);
-  }, [currentSurahNumber, translationLang]);
+    Animated.timing(chromeAnim, { toValue: chromeVisible ? 1 : 0, duration: 200, useNativeDriver: true }).start();
+  }, [chromeVisible, chromeAnim]);
 
-  const loadFontSize = async () => {
-    const size = await getArabicFontSize();
-    setArabicFontSizeState(size);
-  };
-
-  const fetchSurahList = async () => {
-    try {
-      const list = await getSurahList();
-      setSurahs(list);
-    } catch (e) {
-      console.error('Erreur chargement liste sourates:', e);
-    }
-  };
-
-  const loadSurahContent = async (num: number, lang: TranslationLanguage) => {
-    try {
-      setLoading(true);
-      const fetchLang = lang === 'en' ? 'en' : 'fr';
-      const detail = await getSurahDetails(num, fetchLang);
-      setSurahDetail(detail);
-
-      const targetAyah = pendingScrollAyahRef.current;
-      pendingScrollAyahRef.current = null;
-      // Le défilement précis vers un verset n'est possible qu'en mode horizontal (FlatList
-      // paginée par verset) ; en mode vertical (page continue), on se contente de charger
-      // la bonne sourate, le verset de départ du Juz' étant visible dès le haut de la page.
-      if (targetAyah && targetAyah > 1 && orientation === 'horizontal' && detail.ayahs && detail.ayahs[targetAyah - 1]) {
-        setTimeout(() => {
-          ayahListRef.current?.scrollToIndex({
-            index: targetAyah - 1,
-            animated: true,
-            viewPosition: 0.1,
-          });
-        }, 300);
-      }
-
-      // Met à jour le signet "Reprendre la lecture" pour refléter la lecture en cours
-      // dans le Mushaf (jusqu'ici, seul SurahScreen le faisait, d'où le signet figé).
-      saveLastReadPosition(detail.number, detail.name, detail.englishName, targetAyah || 1);
-    } catch (e) {
-      console.error('Erreur chargement sourate Warsh:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Navigue vers le début exact d'un Juz' (sourate + verset), et fait défiler
-   * la liste des versets jusqu'au verset de départ une fois le contenu chargé.
-   */
-  const handleJuzPress = (juz: { startSurah: number; startAyah: number }) => {
-    pendingScrollAyahRef.current = juz.startAyah;
-    if (juz.startSurah === currentSurahNumber) {
-      // Même sourate déjà chargée : déclenche le défilement immédiatement.
-      loadSurahContent(currentSurahNumber, translationLang);
-    } else {
-      setCurrentSurahNumber(juz.startSurah);
-    }
-  };
-
-  const handleFontChange = async (delta: number) => {
-    const nextSize = await setArabicFontSize(arabicFontSize + delta);
-    setArabicFontSizeState(nextSize);
-  };
-
-  const handleNextSurah = () => {
-    if (currentSurahNumber < 114) {
-      setCurrentSurahNumber((prev) => prev + 1);
-    }
-  };
-
-  const handlePrevSurah = () => {
-    if (currentSurahNumber > 1) {
-      setCurrentSurahNumber((prev) => prev - 1);
-    }
-  };
-
-  const handleAyahPress = (ayah: Ayah) => {
-    setSelectedAyah(ayah);
-    setVerseModalVisible(true);
-  };
-
-  /**
-   * Joue UNIQUEMENT ce verset (démarre à son instant précis, s'arrête à la fin de ce
-   * verset), d'après les timestamps générés par détection de pause du récitateur.
-   */
-  const handlePlayAyah = async (ayah: Ayah) => {
-    if (!surahDetail) return;
-    const url = await getEffectiveAudioUrl(currentSurahNumber);
-    const success = await playAyahOnly(url, currentSurahNumber, ayah.numberInSurah);
-    setPlaybackTitle(
-      success
-        ? `${surahDetail.englishName} - Verset ${ayah.numberInSurah}`
-        : `${surahDetail.englishName} (Audio non disponible)`
-    );
-  };
-
-  const filteredSurahs = surahs.filter((s) => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      s.number.toString().includes(q) ||
-      s.englishName.toLowerCase().includes(q) ||
-      s.name.toLowerCase().includes(q)
-    );
-  });
-
-  const filteredJuz = JUZ_LIST.filter((j) => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return j.juzNumber.toString().includes(q) || j.titleFr.toLowerCase().includes(q);
-  });
-
-  const screenWidth = Dimensions.get('window').width;
-
-  // Rendu par verset en mode horizontal (page unique par verset, swipe façon liseuse).
-  const renderAyahItem = ({ item }: { item: Ayah }) => (
-    <View
-      style={[
-        styles.horizontalPageCard,
-        {
-          width: screenWidth - 36,
-          backgroundColor: colors.bgCard,
-          borderColor: colors.border,
-        },
-      ]}
-    >
-      <View style={styles.pageHeader}>
-        <View style={[styles.badge, { backgroundColor: colors.gold }]}>
-          <Text style={styles.badgeText}>Verset {item.numberInSurah}</Text>
-        </View>
-        <Text style={[styles.surahHeaderTitle, { color: colors.gold }]}>
-          {surahDetail?.englishName} ({surahDetail?.name})
-        </Text>
-      </View>
-
-      <Text
-        style={[
-          styles.arabicTextHorizontal,
-          { color: colors.textPrimary, fontSize: arabicFontSize + 2, lineHeight: (arabicFontSize + 2) * 1.8 },
-        ]}
-      >
-        {item.text}
-      </Text>
-
-      {translationLang !== 'none' && item.translation ? (
-        <Text style={[styles.translationText, { color: colors.textSecondary }]}>
-          "{item.translation}"
-        </Text>
-      ) : null}
-
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={[styles.shareActionBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border, marginRight: 8 }]}
-          onPress={() => handlePlayAyah(item)}
-        >
-          <Ionicons name="volume-medium-outline" size={16} color={colors.gold} style={{ marginRight: 6 }} />
-          <Text style={[styles.shareBtnLabel, { color: colors.gold }]}>Écouter</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.shareActionBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
-          onPress={() => handleAyahPress(item)}
-        >
-          <Ionicons name="share-social-outline" size={16} color={colors.gold} style={{ marginRight: 6 }} />
-          <Text style={[styles.shareBtnLabel, { color: colors.gold }]}>Partager</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+  const showToast = useCallback(
+    (text: string) => {
+      setToast(text);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      Animated.timing(toastAnim, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+      toastTimer.current = setTimeout(() => {
+        Animated.timing(toastAnim, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+      }, 1800);
+    },
+    [toastAnim]
   );
 
-  /**
-   * Rendu "page de Mushaf" pour le mode vertical : un unique paragraphe arabe continu et
-   * justifié (comme un vrai Coran imprimé), avec le numéro de chaque verset inséré en
-   * ornement inline ﴿٥﴾ dans le flux du texte, plutôt qu'une carte séparée par verset.
-   * Toucher un verset ouvre le menu d'actions (Écouter / Partager / Favoris / Copier).
-   */
-  const renderContinuousPage = () => {
-    if (!surahDetail) return null;
-    return (
-      <>
-        {shouldShowBasmalaHeader(surahDetail.number) && (
-          <Text style={[styles.basmalaHeaderText, { color: colors.gold }]}>{WARSH_BASMALA}</Text>
-        )}
+  // ---------- Pages ----------
 
-        <Text
-          style={[
-            styles.continuousArabicText,
-            { color: colors.textPrimary, fontSize: arabicFontSize, lineHeight: arabicFontSize * 2.1 },
-          ]}
-        >
-          {surahDetail.ayahs.map((ayah) => (
-            <Text key={ayah.number} onPress={() => handleAyahPress(ayah)}>
-              {ayah.text}
-              <Text style={[styles.verseMarker, { color: colors.gold }]}>
-                {' '}﴿{toArabicDigits(ayah.numberInSurah)}﴾{' '}
-              </Text>
-            </Text>
-          ))}
-        </Text>
+  const goToPage = useCallback((target: number, animated = false) => {
+    const clamped = Math.max(1, Math.min(MUSHAF_PAGE_COUNT, target));
+    listRef.current?.scrollToIndex({ index: clamped - 1, animated });
+  }, []);
 
-        {translationLang !== 'none' && (
-          <View style={styles.translationBlock}>
-            {surahDetail.ayahs.map((ayah) =>
-              ayah.translation ? (
-                <Text key={ayah.number} style={[styles.translationLine, { color: colors.textSecondary }]}>
-                  <Text style={{ color: colors.gold, fontWeight: 'bold' }}>{ayah.numberInSurah}. </Text>
-                  {ayah.translation}
-                </Text>
-              ) : null
-            )}
-          </View>
-        )}
-      </>
-    );
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    const visible = viewableItems[0]?.item as number | undefined;
+    if (!visible || visible === pageRef.current) return;
+    const previous = pageRef.current;
+    pageRef.current = visible;
+    setPage(visible);
+    saveMushafLastPage(visible);
+    const first = MUSHAF_PAGES[visible - 1][0];
+    saveLastReadPosition(first.surah, surahNameAr(first.surah), surahNameLatin(first.surah), first.ayah);
+    if (previous !== null) {
+      setChromeVisible(false);
+      const before = MUSHAF_PAGES[previous - 1][0];
+      if (before.juz !== first.juz || hizbLabelAr(before.eighth) !== hizbLabelAr(first.eighth)) {
+        showToast(`${juzNameAr(first.juz)}  ·  ${hizbLabelAr(first.eighth)}`);
+      }
+    }
+  }).current;
+
+  // ---------- Récitation ----------
+
+  useEffect(() => {
+    return subscribeAudioStatus((status) => {
+      const surah = playbackSurahRef.current;
+      if (surah === null) return;
+      setIsPlaying(status.isPlaying);
+      if (!status.isLoaded) return;
+      const ayah = getAyahAtPosition(surah, status.position);
+      setRecitedAyah((prev) => (prev === ayah ? prev : ayah));
+    });
+  }, []);
+
+  // Suit la récitation : tourne la page quand le verset récité passe sur la page suivante.
+  useEffect(() => {
+    if (!isPlaying || playbackSurah === null || recitedAyah === null) return;
+    const target = pageOfVerse(playbackSurah, recitedAyah);
+    if (target !== pageRef.current) goToPage(target, true);
+  }, [recitedAyah, isPlaying, playbackSurah, goToPage]);
+
+  const stopRecitation = () => {
+    playbackSurahRef.current = null;
+    setPlaybackSurah(null);
+    setRecitedAyah(null);
+    setIsPlaying(false);
   };
 
+  const reciteFrom = async (surah: number, ayah: number) => {
+    const url = await getEffectiveAudioUrl(surah);
+    playbackSurahRef.current = surah;
+    setPlaybackSurah(surah);
+    setRecitedAyah(ayah);
+    const ok = await playAudioTrack(url, getAyahStartRatio(surah, ayah, surahVerseCount(surah)));
+    if (!ok) {
+      stopRecitation();
+      showToast('Audio indisponible');
+    }
+  };
+
+  const handleListenPress = async () => {
+    if (page === null) return;
+    if (playbackSurah !== null && recitedAyah !== null) {
+      await togglePlayPause();
+      return;
+    }
+    const first = MUSHAF_PAGES[page - 1][0];
+    await reciteFrom(first.surah, first.ayah);
+  };
+
+  const handleStopPress = async () => {
+    await stopAudioTrack();
+    stopRecitation();
+  };
+
+  const playSingleVerse = async (v: MushafVerse) => {
+    const url = await getEffectiveAudioUrl(v.surah);
+    playbackSurahRef.current = v.surah;
+    setPlaybackSurah(v.surah);
+    setRecitedAyah(v.ayah);
+    const ok = await playAyahOnly(url, v.surah, v.ayah);
+    if (!ok) {
+      stopRecitation();
+      showToast('Audio indisponible');
+    }
+  };
+
+  // ---------- Signet / actions sur un verset ----------
+
+  const placeBookmark = async (v: MushafVerse) => {
+    setBookmark(await saveMushafBookmark(v.surah, v.ayah, v.page));
+    showToast(`Signet placé · ${surahNameLatin(v.surah)} ${v.ayah}`);
+  };
+
+  const handleBookmarkPress = async () => {
+    if (page === null) return;
+    if (bookmark?.page === page) {
+      await clearMushafBookmark();
+      setBookmark(null);
+      showToast('Signet retiré');
+      return;
+    }
+    await placeBookmark(MUSHAF_PAGES[page - 1][0]);
+  };
+
+  const verseReference = (v: MushafVerse) =>
+    `${surahNameLatin(v.surah)} (${surahNameAr(v.surah)}) · verset ${v.ayah} — Mushaf Warsh, page ${v.page}`;
+
+  const handleCopy = async (v: MushafVerse) => {
+    await Clipboard.setStringAsync(`${v.text.replace(/۞\s*/g, '')}\n\n${verseReference(v)}`);
+    showToast('Verset copié');
+  };
+
+  const handleShare = (v: MushafVerse) => {
+    Share.share({ message: `${v.text.replace(/۞\s*/g, '')}\n\n${verseReference(v)}\n\nAL BARAKA` }).catch(() => {});
+  };
+
+  const handleVersePress = useCallback((v: MushafVerse) => setSheetVerse(v), []);
+  const handleBackgroundPress = useCallback(() => setChromeVisible((visible) => !visible), []);
+
+  const handleFontChange = async (delta: number) => {
+    setFontSize(await setArabicFontSize(fontSize + delta));
+  };
+
+  const runSheetAction = (action: (v: MushafVerse) => void) => {
+    if (!sheetVerse) return;
+    action(sheetVerse);
+    setSheetVerse(null);
+  };
+
+  // ---------- Rendu ----------
+
+  const pageVerses = page ? MUSHAF_PAGES[page - 1] : [];
+  const firstVerse = pageVerses[0];
+  const selectedKey = sheetVerse ? verseKey(sheetVerse) : null;
+  const recitedKey = playbackSurah !== null && recitedAyah !== null ? `${playbackSurah}:${recitedAyah}` : null;
+  const recitedPage = playbackSurah !== null && recitedAyah !== null ? getMushafVerse(playbackSurah, recitedAyah)?.page : undefined;
+  const selectedPage = sheetVerse?.page;
+
+  const renderPage = useCallback(
+    ({ item }: { item: number }) => (
+      <MushafPage
+        page={item}
+        width={width}
+        height={pageHeight}
+        palette={p}
+        fontSize={fontSize}
+        selectedKey={item === selectedPage ? selectedKey : null}
+        recitedKey={item === recitedPage ? recitedKey : null}
+        bookmarked={bookmark?.page === item}
+        revelationTypes={revelationTypes}
+        onVersePress={handleVersePress}
+        onBackgroundPress={handleBackgroundPress}
+      />
+    ),
+    [width, pageHeight, p, fontSize, selectedPage, selectedKey, recitedPage, recitedKey, bookmark, revelationTypes, handleVersePress, handleBackgroundPress]
+  );
+
+  const pageSurahs = useMemo(() => [...new Set(pageVerses.map((v) => v.surah))], [pageVerses]);
+  const chromeTranslateTop = chromeAnim.interpolate({ inputRange: [0, 1], outputRange: [-80, 0] });
+  const chromeTranslateBottom = chromeAnim.interpolate({ inputRange: [0, 1], outputRange: [120, 0] });
+  const reciting = playbackSurah !== null && recitedAyah !== null;
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bgPrimary} />
+    <SafeAreaView style={[styles.container, { backgroundColor: p.screen }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={p.screen} />
 
-      {/* Barre de Recherche Integrée dans le Mushaf */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
-        <Ionicons name="search-outline" size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.textPrimary }]}
-          placeholder="Rechercher une sourate ou un Juz'..."
-          placeholderTextColor={colors.textSecondary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
-            <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
+      <View style={[styles.pagesArea, { marginBottom: TAB_BAR_SPACE }]} onLayout={(e) => setPageHeight(e.nativeEvent.layout.height)}>
+        {page !== null && pageHeight > 0 && (
+          <FlatList
+            ref={listRef}
+            data={PAGE_NUMBERS}
+            keyExtractor={(n) => String(n)}
+            renderItem={renderPage}
+            extraData={renderPage}
+            horizontal
+            inverted // Sens de lecture arabe : la page suivante est à gauche.
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+            initialScrollIndex={page - 1}
+            initialNumToRender={1}
+            maxToRenderPerBatch={2}
+            windowSize={3}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={VIEWABILITY}
+            onScrollToIndexFailed={({ index }) => setTimeout(() => listRef.current?.scrollToIndex({ index, animated: false }), 50)}
+          />
         )}
       </View>
 
-      {/* Sélecteur d'Onglets: Sourates vs Juz' */}
-      <View style={[styles.tabSegmentContainer, { backgroundColor: colors.bgSecondary }]}>
-        <TouchableOpacity
+      {/* En-tête (masqué en lecture, réapparaît d'une touche sur la page) */}
+      {firstVerse && (
+        <Animated.View
+          pointerEvents={chromeVisible ? 'auto' : 'none'}
           style={[
-            styles.tabSegmentBtn,
-            activeTab === 'sourates' && { backgroundColor: colors.gold },
+            styles.topBar,
+            { backgroundColor: p.chrome, borderColor: p.goldSoft, opacity: chromeAnim, transform: [{ translateY: chromeTranslateTop }] },
           ]}
-          onPress={() => setActiveTab('sourates')}
         >
-          <Text
-            style={[
-              styles.tabSegmentText,
-              { color: activeTab === 'sourates' ? '#0F172A' : colors.textSecondary },
-            ]}
-          >
-            📖 Sourates (114)
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tabSegmentBtn,
-            activeTab === 'juz' && { backgroundColor: colors.gold },
-          ]}
-          onPress={() => setActiveTab('juz')}
-        >
-          <Text
-            style={[
-              styles.tabSegmentText,
-              { color: activeTab === 'juz' ? '#0F172A' : colors.textSecondary },
-            ]}
-          >
-            📜 Juz' (30)
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Carrousel de sélection rapide par Sourate ou Juz' */}
-      <View style={{ maxHeight: 44, marginVertical: 6 }}>
-        {activeTab === 'sourates' ? (
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={filteredSurahs}
-            keyExtractor={(item) => item.number.toString()}
-            contentContainerStyle={{ paddingHorizontal: 12 }}
-            renderItem={({ item }) => {
-              const isSelected = item.number === currentSurahNumber;
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.chipBtn,
-                    {
-                      backgroundColor: isSelected ? colors.gold : colors.bgSecondary,
-                      borderColor: isSelected ? colors.gold : colors.border,
-                    },
-                  ]}
-                  onPress={() => setCurrentSurahNumber(item.number)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      { color: isSelected ? '#0F172A' : colors.textPrimary },
-                    ]}
-                  >
-                    {item.number}. {item.englishName}
-                  </Text>
-                </TouchableOpacity>
-              );
+          <TouchableOpacity
+            style={styles.topSide}
+            onPress={() => {
+              setIndexTab('juz');
+              setIndexVisible(true);
             }}
-          />
-        ) : (
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={filteredJuz}
-            keyExtractor={(item) => item.juzNumber.toString()}
-            contentContainerStyle={{ paddingHorizontal: 12 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.chipBtn,
-                  {
-                    backgroundColor: colors.bgSecondary,
-                    borderColor: colors.border,
-                  },
-                ]}
-                onPress={() => handleJuzPress(item)}
-              >
-                <Text style={[styles.chipText, { color: colors.gold }]}>
-                  {item.titleFr} ({item.titleAr})
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-      </View>
-
-      {/* Control Toolbar Header */}
-      <View style={[styles.toolbar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
-        {/* Bouton Accueil 🏠 */}
-        <TouchableOpacity
-          style={[styles.homeBtn, { backgroundColor: colors.bgPrimary, borderColor: colors.border }]}
-          onPress={() => navigation.navigate('HomeTab')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="home-outline" size={18} color={colors.textPrimary} />
-        </TouchableOpacity>
-
-        {/* Prev / Next Surah */}
-        <View style={styles.surahNavControls}>
-          <TouchableOpacity
-            onPress={handlePrevSurah}
-            disabled={currentSurahNumber <= 1}
-            style={[styles.navBtn, { opacity: currentSurahNumber <= 1 ? 0.3 : 1 }]}
           >
-            <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+            <Text style={[styles.topSideText, { color: p.title }]} numberOfLines={1}>
+              {juzNameAr(firstVerse.juz)}
+            </Text>
+            <Text style={[styles.topSideSub, { color: p.muted }]} numberOfLines={1}>
+              {hizbLabelAr(firstVerse.eighth)}
+            </Text>
           </TouchableOpacity>
-
-          <View style={styles.surahInfoBox}>
-            <Text style={[styles.surahTitle, { color: colors.gold }]} numberOfLines={1}>
-              {surahDetail?.englishName || `Sourate ${currentSurahNumber}`}
+          <TouchableOpacity
+            style={styles.topCenter}
+            onPress={() => {
+              setIndexTab('surahs');
+              setIndexVisible(true);
+            }}
+          >
+            <Text style={[styles.topTitle, { color: p.ink }]} numberOfLines={1}>
+              سورة {pageSurahs.map(surahNameAr).join(' · ')}
             </Text>
-            <Text style={[styles.surahSubTitle, { color: colors.textSecondary }]}>
-              Warsh (ورش) • N°{currentSurahNumber}/114
-            </Text>
+            <View style={styles.topSubRow}>
+              <Text style={[styles.topSub, { color: p.muted }]} numberOfLines={1}>
+                {pageSurahs.map(surahNameLatin).join(' · ')}
+              </Text>
+              <Ionicons name="chevron-down" size={11} color={p.muted} style={{ marginLeft: 3 }} />
+            </View>
+          </TouchableOpacity>
+          <View style={[styles.topSide, { alignItems: 'flex-end' }]}>
+            <Text style={[styles.topPage, { color: p.gold }]}>{toArabicDigits(page ?? 1)}</Text>
+            <Text style={[styles.topSideSub, { color: p.muted }]}>Page {page}</Text>
           </View>
-
-          <TouchableOpacity
-            onPress={handleNextSurah}
-            disabled={currentSurahNumber >= 114}
-            style={[styles.navBtn, { opacity: currentSurahNumber >= 114 ? 0.3 : 1 }]}
-          >
-            <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Action Controls: Font size + Settings Modal Trigger Button */}
-        <View style={styles.rightControls}>
-          {/* Orientation Toggle Quick Button */}
-          <TouchableOpacity
-            style={[
-              styles.orientationBtn,
-              {
-                backgroundColor: orientation === 'horizontal' ? colors.gold : colors.bgPrimary,
-                borderColor: colors.border,
-              },
-            ]}
-            onPress={() => setOrientation(orientation === 'vertical' ? 'horizontal' : 'vertical')}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={orientation === 'horizontal' ? 'swap-horizontal' : 'swap-vertical'}
-              size={16}
-              color={orientation === 'horizontal' ? '#0F172A' : colors.gold}
-            />
-            <Text
-              style={[
-                styles.orientationLabel,
-                { color: orientation === 'horizontal' ? '#0F172A' : colors.textPrimary },
-              ]}
-            >
-              {orientation === 'horizontal' ? 'Horiz. (RTL)' : 'Vert.'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Bouton Paramètres ⚙️ */}
-          <TouchableOpacity
-            style={[styles.settingsBtn, { backgroundColor: colors.gold }]}
-            onPress={() => setIsSettingsOpen(true)}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="settings-sharp" size={18} color="#0F172A" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.gold} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Chargement des versets Warsh...
-          </Text>
-        </View>
-      ) : orientation === 'vertical' ? (
-        // Mode "page de Mushaf" : un flux continu de texte justifié, comme un vrai Coran.
-        <ScrollView contentContainerStyle={styles.continuousPageContent} showsVerticalScrollIndicator={false}>
-          {renderContinuousPage()}
-        </ScrollView>
-      ) : (
-        <FlatList
-          ref={ayahListRef}
-          data={surahDetail?.ayahs}
-          onScrollToIndexFailed={() => {}}
-          horizontal
-          inverted // Sens de défilement de Droite à Gauche (RTL) pour l'Arabe
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.number.toString()}
-          renderItem={renderAyahItem}
-          contentContainerStyle={styles.horizontalListContent}
-        />
+        </Animated.View>
       )}
 
-      {/* Settings Modal */}
-      <SettingsModal
-        visible={isSettingsOpen}
-        orientation={orientation}
-        fontSize={arabicFontSize}
-        translationLang={translationLang}
-        onClose={() => setIsSettingsOpen(false)}
-        onToggleOrientation={(mode) => setOrientation(mode)}
-        onChangeFontSize={handleFontChange}
-        onChangeTranslationLang={(lang) => setTranslationLang(lang)}
+      {/* Bulle Juz' / Hizb / messages */}
+      <Animated.View pointerEvents="none" style={[styles.toast, { backgroundColor: p.greenDeep, borderColor: p.gold, opacity: toastAnim }]}>
+        <Text style={[styles.toastText, { color: p.onGreen }]}>{toast}</Text>
+      </Animated.View>
+
+      {/* Barre d'outils */}
+      <Animated.View
+        pointerEvents={chromeVisible ? 'auto' : 'none'}
+        style={[
+          styles.toolbar,
+          { backgroundColor: p.greenDeep, borderColor: p.gold, opacity: chromeAnim, transform: [{ translateY: chromeTranslateBottom }] },
+        ]}
+      >
+        <ToolbarButton
+          icon="list"
+          label="Index"
+          color={p.onGreen}
+          onPress={() => {
+            setIndexTab('surahs');
+            setIndexVisible(true);
+          }}
+        />
+        <ToolbarButton
+          icon="grid-outline"
+          label="Juz'"
+          color={p.onGreen}
+          onPress={() => {
+            setIndexTab('juz');
+            setIndexVisible(true);
+          }}
+        />
+        <TouchableOpacity
+          style={[styles.listenBtn, { backgroundColor: p.gold }]}
+          onPress={handleListenPress}
+          onLongPress={handleStopPress}
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name={reciting && isPlaying ? 'pause' : 'play'}
+            size={24}
+            color={p.greenDeep}
+            style={reciting && isPlaying ? undefined : { marginLeft: 3 }}
+          />
+        </TouchableOpacity>
+        <ToolbarButton
+          icon={bookmark?.page === page ? 'bookmark' : 'bookmark-outline'}
+          label="Signet"
+          color={p.onGreen}
+          onPress={handleBookmarkPress}
+        />
+        <ToolbarButton icon="text-outline" label="Affichage" color={p.onGreen} onPress={() => setSettingsOpen(true)} />
+      </Animated.View>
+
+      {reciting && (
+        <View style={[styles.nowPlaying, { backgroundColor: p.chrome, borderColor: p.goldSoft }]}>
+          <Ionicons name={isPlaying ? 'volume-medium' : 'volume-mute'} size={13} color={p.title} />
+          <Text style={[styles.nowPlayingText, { color: p.ink }]}>
+            {surahNameLatin(playbackSurah!)} · verset {recitedAyah}
+          </Text>
+          <TouchableOpacity onPress={() => goToPage(pageOfVerse(playbackSurah!, recitedAyah!), true)} hitSlop={8}>
+            <Ionicons name="locate" size={14} color={p.gold} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleStopPress} hitSlop={8}>
+            <Ionicons name="close" size={14} color={p.muted} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Actions sur un verset */}
+      <Modal visible={!!sheetVerse} transparent animationType="fade" onRequestClose={() => setSheetVerse(null)}>
+        <Pressable style={styles.sheetOverlay} onPress={() => setSheetVerse(null)}>
+          {sheetVerse && (
+            <Pressable style={[styles.sheet, { backgroundColor: p.page, borderColor: p.gold }]}>
+              <Text style={[styles.sheetTitle, { color: p.title }]}>
+                سورة {surahNameAr(sheetVerse.surah)} · {toArabicDigits(sheetVerse.ayah)}
+              </Text>
+              <Text style={[styles.sheetSub, { color: p.muted }]}>
+                {surahNameLatin(sheetVerse.surah)} · verset {sheetVerse.ayah} · page {sheetVerse.page}
+              </Text>
+              <Text style={[styles.sheetVerse, { color: p.ink }]} numberOfLines={6}>
+                {sheetVerse.text}
+              </Text>
+              <View style={styles.sheetActions}>
+                <SheetAction icon="play-circle-outline" label="Écouter ce verset" palette={p} onPress={() => runSheetAction(playSingleVerse)} />
+                <SheetAction
+                  icon="play-forward-outline"
+                  label="Réciter à partir d'ici"
+                  palette={p}
+                  onPress={() => runSheetAction((v) => reciteFrom(v.surah, v.ayah))}
+                />
+                <SheetAction icon="bookmark-outline" label="Placer le signet ici" palette={p} onPress={() => runSheetAction(placeBookmark)} />
+                <SheetAction icon="copy-outline" label="Copier" palette={p} onPress={() => runSheetAction(handleCopy)} />
+                <SheetAction icon="share-social-outline" label="Partager" palette={p} onPress={() => runSheetAction(handleShare)} />
+              </View>
+            </Pressable>
+          )}
+        </Pressable>
+      </Modal>
+
+      <MushafIndexModal
+        visible={indexVisible}
+        initialTab={indexTab}
+        currentSurah={firstVerse?.surah ?? 1}
+        currentEighth={firstVerse?.eighth ?? 1}
+        bookmark={bookmark}
+        revelationTypes={revelationTypes}
+        palette={p}
+        onClose={() => setIndexVisible(false)}
+        onSelectPage={(target) => goToPage(target)}
       />
 
-      {/* Modal d'action sur le verset (Écouter / Partager / Favoris / Copier) */}
-      {surahDetail && (
-        <VerseModal
-          visible={verseModalVisible}
-          ayah={selectedAyah}
-          surahName={surahDetail.englishName}
-          surahNumber={surahDetail.number}
-          onClose={() => setVerseModalVisible(false)}
-          onPlayVerse={handlePlayAyah}
-        />
-      )}
-
-      {/* Barre de lecture (affichée dès qu'un verset a été écouté) */}
-      {playbackTitle && (
-        <AudioPlayerBar surahTitle={playbackTitle} reciterName="Serigne Aboul Baraka Mbacké" />
-      )}
+      <SettingsModal
+        visible={settingsOpen}
+        orientation="horizontal"
+        fontSize={fontSize}
+        translationLang="none"
+        onClose={() => setSettingsOpen(false)}
+        onToggleOrientation={() => {}}
+        onChangeFontSize={handleFontChange}
+        onChangeTranslationLang={() => {}}
+        showOrientation={false}
+        showTranslation={false}
+      />
     </SafeAreaView>
   );
 };
+
+const ToolbarButton: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  color: string;
+  onPress: () => void;
+}> = ({ icon, label, color, onPress }) => (
+  <TouchableOpacity style={styles.toolBtn} onPress={onPress} activeOpacity={0.7}>
+    <Ionicons name={icon} size={20} color={color} />
+    <Text style={[styles.toolLabel, { color }]}>{label}</Text>
+  </TouchableOpacity>
+);
+
+const SheetAction: React.FC<{
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  palette: MushafPalette;
+  onPress: () => void;
+}> = ({ icon, label, palette: p, onPress }) => (
+  <TouchableOpacity style={[styles.sheetAction, { borderColor: p.chromeBorder }]} onPress={onPress} activeOpacity={0.7}>
+    <Ionicons name={icon} size={20} color={p.gold} />
+    <Text style={[styles.sheetActionLabel, { color: p.ink }]}>{label}</Text>
+  </TouchableOpacity>
+);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  searchContainer: {
-    marginHorizontal: 12,
-    marginTop: 10,
-    marginBottom: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    height: 40,
-  },
-  searchInput: {
+  pagesArea: {
     flex: 1,
-    fontSize: 13,
   },
-  tabSegmentContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 12,
-    borderRadius: 12,
-    padding: 3,
-  },
-  tabSegmentBtn: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  tabSegmentText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  chipBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginRight: 6,
-  },
-  chipText: {
-    fontSize: 11.5,
-    fontWeight: 'bold',
-  },
-  toolbar: {
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingTop: 6,
+    paddingBottom: 4,
     borderBottomWidth: 1,
   },
-  homeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
+  topSide: {
+    width: 100,
   },
-  surahNavControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  navBtn: {
-    padding: 6,
-  },
-  surahInfoBox: {
-    marginHorizontal: 8,
-    flex: 1,
-  },
-  surahTitle: {
+  topSideText: {
+    fontFamily: 'KFGQPC_Warsh',
     fontSize: 15,
-    fontWeight: 'bold',
+    lineHeight: 24,
   },
-  surahSubTitle: {
+  topSideSub: {
     fontSize: 10,
-    marginTop: 1,
+    marginTop: -2,
   },
-  rightControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  orientationBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginRight: 6,
-  },
-  orientationLabel: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    marginLeft: 4,
-  },
-  settingsBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 3,
-  },
-  centered: {
+  topCenter: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 6,
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 14,
+  topTitle: {
+    fontFamily: 'KFGQPC_Warsh',
+    fontSize: 19,
+    lineHeight: 34,
+    paddingTop: 2,
   },
-  verticalListContent: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 130,
-  },
-  horizontalListContent: {
-    paddingHorizontal: 18,
-    paddingVertical: 20,
+  topSubRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginTop: -4,
   },
-  basmalaHeaderText: {
-    fontSize: 24,
-    fontFamily: 'KFGQPC_Warsh',
-    textAlign: 'center',
-    writingDirection: 'rtl',
-    marginBottom: 16,
+  topSub: {
+    fontSize: 10,
+    letterSpacing: 0.5,
   },
-  continuousPageContent: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 140,
-  },
-  continuousArabicText: {
-    fontFamily: 'KFGQPC_Warsh',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  verseMarker: {
-    fontSize: 15,
+  topPage: {
+    fontSize: 17,
     fontWeight: 'bold',
   },
-  translationBlock: {
-    marginTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(148, 163, 184, 0.25)',
-    paddingTop: 16,
-  },
-  translationLine: {
-    fontSize: 13,
-    lineHeight: 20,
-    marginBottom: 10,
-  },
-  verticalAyahCard: {
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
+  toast: {
+    position: 'absolute',
+    top: 78,
+    alignSelf: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    borderRadius: 18,
     borderWidth: 1,
   },
-  horizontalPageCard: {
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1.5,
-    marginRight: 18,
-    justifyContent: 'space-between',
-    minHeight: Dimensions.get('window').height * 0.65,
+  toastText: {
+    fontFamily: 'KFGQPC_Warsh',
+    fontSize: 16,
+    lineHeight: 26,
+    textAlign: 'center',
+  },
+  toolbar: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    bottom: TAB_BAR_SPACE + 8,
+    height: 58,
+    borderRadius: 22,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 10,
+    elevation: 10,
   },
-  pageHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  toolBtn: {
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'center',
+    width: 58,
   },
-  surahHeaderTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
+  toolLabel: {
+    fontSize: 9.5,
+    marginTop: 2,
+    fontWeight: '600',
   },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  listenBtn: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'center',
+    marginTop: -22,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  badgeText: {
-    color: '#0F172A',
-    fontWeight: 'bold',
-    fontSize: 11,
-  },
-  playIconBtn: {
-    width: 28,
-    height: 28,
+  nowPlaying: {
+    position: 'absolute',
+    top: 8,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: 14,
     borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  actionRow: {
-    flexDirection: 'row',
-    marginTop: 16,
+  nowPlayingText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
-  arabicTextVertical: {
-    textAlign: 'right',
-  },
-  arabicTextHorizontal: {
-    textAlign: 'center',
-    marginVertical: 10,
-  },
-  translationText: {
-    fontSize: 14,
-    lineHeight: 22,
-    marginTop: 12,
-    fontStyle: 'italic',
-  },
-  shareActionBtn: {
+  sheetOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 30,
+  },
+  sheetTitle: {
+    fontFamily: 'KFGQPC_Warsh',
+    fontSize: 20,
+    lineHeight: 34,
+    textAlign: 'center',
+  },
+  sheetSub: {
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: -2,
+  },
+  sheetVerse: {
+    fontFamily: 'KFGQPC_Warsh',
+    fontSize: 20,
+    lineHeight: 40,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginVertical: 12,
+  },
+  sheetActions: {
+    gap: 8,
+  },
+  sheetAction: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 12,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: 14,
     borderWidth: 1,
   },
-  shareBtnLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  sheetActionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

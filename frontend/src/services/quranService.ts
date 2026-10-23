@@ -1,30 +1,48 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ApiResponse, Surah, SurahDetail, SearchOccurrenceStats, SearchOccurrenceItem } from '../types/quran';
-import warshTextData from '../data/warshText.json';
+import { ApiResponse, Ayah, Surah, SurahDetail, SearchOccurrenceStats, SearchOccurrenceItem } from '../types/quran';
+import {
+  MUSHAF_VERSES,
+  WARSH_BASMALA,
+  getWarshAyahs,
+  hafsToWarsh,
+  surahNameAr,
+  surahNameLatin,
+  surahVerseCount,
+  warshToHafs,
+} from './warshMushafService';
 
 const BASE_URL = 'https://api.alquran.cloud/v1';
 
-// Texte réel en riwaya Warsh (source : King Fahd Quran Complex, via qurancomplex.gov.sa),
-// embarqué localement car aucune édition "ar.warsh" n'existe réellement sur l'API
-// alquran.cloud (elle y retombait silencieusement sur le texte Hafs/Uthmani par défaut).
-// Indexé par numéro de sourate (string) -> tableau de versets (index 0 = verset 1).
-const WARSH_TEXT: Record<string, string[]> = warshTextData as Record<string, string[]>;
-
-// La Basmala en calligraphie Warsh = le verset 1 d'Al-Fatiha (même formule, même graphie).
-export const WARSH_BASMALA = WARSH_TEXT['1'][0];
+// Le texte arabe ET la numérotation des versets sont ceux du Mushaf Warsh du Complexe Roi Fahd
+// (embarqué, voir warshMushafService) : aucune édition Warsh n'existe sur l'API alquran.cloud.
+// L'API ne sert qu'aux traductions (numérotées à la Hafs, rattachées via warshToHafs) et aux
+// métadonnées des sourates.
+export { WARSH_BASMALA };
 
 /**
- * Indique si l'en-tête décoratif "Bismillah" doit être affiché au-dessus des versets
- * d'une sourate : oui pour toutes les sourates SAUF Al-Fatiha (où la Basmala est déjà
- * le verset 1 lui-même) et At-Tawbah/Sourate 9 (seule sourate du Coran sans Basmala,
- * exception bien connue liée à son contexte de révélation).
+ * Indique si la Basmala décorative doit être affichée au-dessus des versets : en Warsh elle
+ * n'est jamais un verset numéroté (pas même dans Al-Fatiha), donc toujours, sauf pour
+ * At-Tawbah (sourate 9), seule sourate du Coran sans Basmala.
  */
-export const shouldShowBasmalaHeader = (surahNumber: number): boolean =>
-  surahNumber !== 1 && surahNumber !== 9;
+export const shouldShowBasmalaHeader = (surahNumber: number): boolean => surahNumber !== 9;
 
 // In-Memory Cache pour des performances ultra-rapides
 let cachedSurahList: Surah[] | null = null;
 const cachedSurahDetailsMap = new Map<string, SurahDetail>();
+
+/** Remplace le nombre de versets (Hafs côté API) par celui du Mushaf Warsh. */
+const withWarshCounts = (list: Surah[]): Surah[] => list.map((s) => ({ ...s, numberOfAyahs: surahVerseCount(s.number) }));
+
+/** Liste minimale construite depuis le Mushaf embarqué (si l'API est injoignable). */
+const offlineSurahList = (): Surah[] =>
+  Array.from({ length: 114 }, (_, i) => ({
+    number: i + 1,
+    name: `سورة ${surahNameAr(i + 1)}`,
+    englishName: surahNameLatin(i + 1),
+    englishNameTranslation: '',
+    numberOfAyahs: surahVerseCount(i + 1),
+    revelationType: 'Meccan' as const,
+  }));
 
 /**
  * Récupère la liste globale des 114 sourates (avec Cache Ultra-Rapide).
@@ -37,8 +55,8 @@ export const getSurahList = async (): Promise<Surah[]> => {
   try {
     const local = await AsyncStorage.getItem('@albaraka_surah_list');
     if (local) {
-      cachedSurahList = JSON.parse(local);
-      return cachedSurahList!;
+      cachedSurahList = withWarshCounts(JSON.parse(local));
+      return cachedSurahList;
     }
   } catch {
     // Ignorer si pas de cache local
@@ -50,17 +68,41 @@ export const getSurahList = async (): Promise<Surah[]> => {
       throw new Error(`Erreur lors de la récupération des sourates: ${response.status}`);
     }
     const json: ApiResponse<Surah[]> = await response.json();
-    cachedSurahList = json.data;
+    cachedSurahList = withWarshCounts(json.data);
     AsyncStorage.setItem('@albaraka_surah_list', JSON.stringify(json.data)).catch(() => {});
-    return json.data;
+    return cachedSurahList;
   } catch (error) {
-    console.error('quranService.getSurahList error:', error);
-    throw error;
+    console.warn('quranService.getSurahList : API injoignable, liste hors ligne utilisée.', error);
+    return offlineSurahList();
   }
 };
 
 /**
- * Récupère les détails et versets en version WARSH (ورش عن نافع) et leur traduction (français ou anglais).
+ * Rattache à chaque verset Warsh la traduction des versets Hafs correspondants. Quand un verset
+ * Hafs est coupé en plusieurs versets Warsh, sa traduction est donnée au premier, et les
+ * suivants y renvoient.
+ */
+const attachTranslations = (surahNumber: number, ayahs: Ayah[], hafsTranslations: string[]): Ayah[] => {
+  let lastHafsGiven = 0;
+  let lastWarshWithIt = 0;
+  return ayahs.map((ayah) => {
+    const [first, last] = warshToHafs(surahNumber, ayah.numberInSurah);
+    const from = Math.max(first, lastHafsGiven + 1);
+    let translation: string | undefined;
+    if (from <= last) {
+      translation = hafsTranslations.slice(from - 1, last).join(' ');
+      lastHafsGiven = last;
+      lastWarshWithIt = ayah.numberInSurah;
+    } else if (hafsTranslations.length > 0) {
+      translation = `(Traduction réunie avec le verset ${lastWarshWithIt}.)`;
+    }
+    return { ...ayah, translation };
+  });
+};
+
+/**
+ * Récupère les versets d'une sourate en riwaya WARSH (ورش عن نافع), numérotation du Mushaf Warsh,
+ * avec leur traduction (français ou anglais) si l'API est joignable.
  * @param surahNumber Numéro de la sourate (1 à 114)
  * @param lang Langue de la traduction ('fr' | 'en')
  */
@@ -68,9 +110,8 @@ export const getSurahDetails = async (
   surahNumber: number,
   lang: 'fr' | 'en' = 'fr'
 ): Promise<SurahDetail> => {
-  // "v2" invalide le cache local des utilisateurs ayant déjà l'ancien texte Hafs
-  // (l'édition "ar.warsh" utilisée avant n'existait pas réellement côté API).
-  const cacheKey = `warsh_v2_${surahNumber}_${lang}`;
+  // "v3" : numérotation Warsh (les caches v2 étaient numérotés à la Hafs).
+  const cacheKey = `warsh_v3_${surahNumber}_${lang}`;
 
   if (cachedSurahDetailsMap.has(cacheKey)) {
     return cachedSurahDetailsMap.get(cacheKey)!;
@@ -87,35 +128,30 @@ export const getSurahDetails = async (
     // Ignorer si pas de cache
   }
 
+  const warshAyahs = getWarshAyahs(surahNumber);
   try {
-    // On récupère la traduction + toutes les métadonnées par verset (juz, page, sajda...)
-    // via l'API, mais le TEXTE ARABE vient du jeu de données Warsh embarqué localement.
     const translationEdition = lang === 'en' ? 'en.sahih' : 'fr.hamidullah';
     const response = await fetch(`${BASE_URL}/surah/${surahNumber}/${translationEdition}`);
     if (!response.ok) {
       throw new Error(`Erreur lors de la récupération de la sourate ${surahNumber}: ${response.status}`);
     }
     const json: ApiResponse<SurahDetail> = await response.json();
-    const translationData = json.data;
-    const warshVerses = WARSH_TEXT[String(surahNumber)];
-
-    const combinedAyahs = translationData.ayahs.map((ayah, index) => ({
-      ...ayah,
-      text: warshVerses?.[index] || ayah.text,
-      translation: ayah.text,
-    }));
+    const { ayahs: hafsAyahs, ...meta } = json.data;
 
     const result: SurahDetail = {
-      ...translationData,
-      ayahs: combinedAyahs,
+      ...meta,
+      numberOfAyahs: warshAyahs.length,
+      ayahs: attachTranslations(surahNumber, warshAyahs, hafsAyahs.map((a) => a.text)),
     };
 
     cachedSurahDetailsMap.set(cacheKey, result);
     AsyncStorage.setItem(`@albaraka_surah_${cacheKey}`, JSON.stringify(result)).catch(() => {});
     return result;
   } catch (error) {
-    console.error(`quranService.getSurahDetails (Warsh) error (Surah ${surahNumber}):`, error);
-    throw error;
+    // Hors ligne : le texte Warsh est embarqué, on l'affiche sans traduction (non mis en cache).
+    console.warn(`quranService.getSurahDetails : traduction indisponible (sourate ${surahNumber}).`, error);
+    const meta = (await getSurahList()).find((s) => s.number === surahNumber) ?? offlineSurahList()[surahNumber - 1];
+    return { ...meta, numberOfAyahs: warshAyahs.length, ayahs: warshAyahs };
   }
 };
 
@@ -143,22 +179,18 @@ const searchArabicLocally = async (query: string): Promise<SearchOccurrenceStats
   const results: SearchOccurrenceItem[] = [];
   const uniqueSurahs = new Set<number>();
 
-  for (const [surahNumStr, verses] of Object.entries(WARSH_TEXT)) {
-    const surahNumber = parseInt(surahNumStr, 10);
-    const surahInfo = surahMap.get(surahNumber);
-    verses.forEach((verseText, idx) => {
-      if (normalizeArabic(verseText).includes(normalizedQuery)) {
-        uniqueSurahs.add(surahNumber);
-        results.push({
-          surahNumber,
-          surahName: surahInfo?.name || '',
-          englishName: surahInfo?.englishName || '',
-          numberInSurah: idx + 1,
-          text: verseText,
-        });
-      }
+  MUSHAF_VERSES.forEach((verse) => {
+    if (!normalizeArabic(verse.text).includes(normalizedQuery)) return;
+    const surahInfo = surahMap.get(verse.surah);
+    uniqueSurahs.add(verse.surah);
+    results.push({
+      surahNumber: verse.surah,
+      surahName: surahInfo?.name || '',
+      englishName: surahInfo?.englishName || '',
+      numberInSurah: verse.ayah,
+      text: verse.text,
     });
-  }
+  });
 
   results.sort((a, b) => a.surahNumber - b.surahNumber || a.numberInSurah - b.numberInSurah);
 
@@ -228,7 +260,8 @@ const formatSearchResults = (query: string, data: any): SearchOccurrenceStats =>
       surahNumber: m.surah?.number || 1,
       surahName: m.surah?.name || 'سورة',
       englishName: m.surah?.englishName || 'Surah',
-      numberInSurah: m.numberInSurah || 1,
+      // Résultat de l'API numéroté à la Hafs : converti vers la numérotation Warsh.
+      numberInSurah: hafsToWarsh(m.surah?.number || 1, m.numberInSurah || 1),
       text: m.text || '',
       translation: m.edition?.language === 'fr' || m.edition?.language === 'en' ? m.text : undefined,
     };

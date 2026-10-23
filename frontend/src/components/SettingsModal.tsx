@@ -22,6 +22,8 @@ interface SettingsModalProps {
   onToggleOrientation: (orientation: MushafPageOrientation) => void;
   onChangeFontSize: (delta: number) => void;
   onChangeTranslationLang: (lang: TranslationLanguage) => void;
+  showOrientation?: boolean;
+  showTranslation?: boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -33,6 +35,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleOrientation,
   onChangeFontSize,
   onChangeTranslationLang,
+  showOrientation = true,
+  showTranslation = true,
 }) => {
   const { colors, isDark, toggleTheme } = useTheme();
   const [azanOn, setAzanOn] = useState<boolean>(false);
@@ -69,6 +73,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </Text>
 
             {/* Section 1: Orientation du Mushaf */}
+            {showOrientation && (
             <View style={[styles.settingSection, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
                 Sens de défilement des pages du Mushaf
@@ -149,8 +154,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </TouchableOpacity>
               </View>
             </View>
+            )}
 
             {/* Section 2: Langue de Traduction */}
+            {showTranslation && (
             <View style={[styles.settingSection, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Langue de Traduction</Text>
               <Text style={[styles.sectionSub, { color: colors.textSecondary }]}>
@@ -222,6 +229,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </TouchableOpacity>
               </View>
             </View>
+            )}
 
             {/* Section 3: Taille du texte Arabe */}
             <View style={[styles.settingSection, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
