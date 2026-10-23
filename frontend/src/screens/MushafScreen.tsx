@@ -22,12 +22,11 @@ import { getSurahList } from '../services/quranService';
 import { getArabicFontSize, setArabicFontSize, subscribeFontSizeChange } from '../services/settingsService';
 import {
   playAyahOnly,
-  playAudioTrack,
+  playAudioFromAyah,
   togglePlayPause,
   stopAudioTrack,
   subscribeAudioStatus,
   getAyahAtPosition,
-  getAyahStartRatio,
 } from '../services/audioService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
 import {
@@ -231,7 +230,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
     playbackSurahRef.current = surah;
     setPlaybackSurah(surah);
     setRecitedAyah(ayah);
-    const ok = await playAudioTrack(url, getAyahStartRatio(surah, ayah, surahVerseCount(surah)));
+    const ok = await playAudioFromAyah(url, surah, ayah, surahVerseCount(surah));
     if (!ok) {
       stopRecitation();
       showToast('Audio indisponible');

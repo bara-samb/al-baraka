@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getSurahList } from '../services/quranService';
-import { getAyahStartRatio, playAudioTrack, subscribeAudioStatus, togglePlayPause, SoundStatus } from '../services/audioService';
+import { playAudioFromAyah, subscribeAudioStatus, togglePlayPause, SoundStatus } from '../services/audioService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
 import { saveLastReadPosition } from '../services/bookmarkService';
 import { Surah } from '../types/quran';
@@ -67,7 +67,7 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
     setCurrentSurah(surah);
     saveLastReadPosition(surah.number, surah.name, surah.englishName, ayah);
     const audioUrl = await getEffectiveAudioUrl(surah.number);
-    await playAudioTrack(audioUrl, ayah > 1 ? getAyahStartRatio(surah.number, ayah, surah.numberOfAyahs) : 0);
+    await playAudioFromAyah(audioUrl, surah.number, ayah, surah.numberOfAyahs);
   };
 
   // « Reprendre la lecture » (accueil) : relance la sourate au verset où l'on s'était arrêté.

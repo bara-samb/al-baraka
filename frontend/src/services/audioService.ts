@@ -128,17 +128,19 @@ const notifyListeners = (status: SoundStatus) => {
  * démarrer la lecture d'un fichier audio de sourate complète à un instant estimé
  * (ex: pour cibler approximativement un verset précis, faute de fichiers audio
  * segmentés par verset).
+ * @param startSeconds Instant de départ exact, appliqué dès le chargement.
  * Retourne true en cas de succès, false si le fichier n'a pas pu être chargé (ex: 404).
  */
-export const playAudioTrack = async (url: string, startRatio: number = 0): Promise<boolean> => {
+export const playAudioTrack = async (url: string, startRatio: number = 0, startSeconds: number = 0): Promise<boolean> => {
   stopAtSeconds = null; // lecture normale : pas de limite de fin
   try {
     await stopAudioTrack();
     await initAudioMode();
 
+    // startSeconds : la lecture démarre directement à cet instant (un seul chargement).
     const { sound, status } = await Audio.Sound.createAsync(
       { uri: url },
-      { shouldPlay: true },
+      { shouldPlay: true, positionMillis: Math.max(0, startSeconds * 1000) },
       onPlaybackStatusUpdate
     );
 
@@ -161,6 +163,23 @@ export const playAudioTrack = async (url: string, startRatio: number = 0): Promi
     });
     return false;
   }
+};
+
+/**
+ * Lit une sourate à partir d'un verset. Avec le minutage précis, la lecture démarre
+ * directement à l'instant du verset ; sans lui, elle démarre au début puis se place à une
+ * position estimée (ce qui demande un second chargement).
+ */
+export const playAudioFromAyah = (
+  url: string,
+  surahNumber: number,
+  numberInSurah: number,
+  totalAyahsInSurah: number
+): Promise<boolean> => {
+  if (numberInSurah <= 1) return playAudioTrack(url);
+  const bounds = getAyahBoundsSeconds(surahNumber, numberInSurah);
+  if (bounds) return playAudioTrack(url, 0, bounds.startSec);
+  return playAudioTrack(url, getAyahStartRatio(surahNumber, numberInSurah, totalAyahsInSurah));
 };
 
 /**

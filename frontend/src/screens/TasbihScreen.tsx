@@ -40,6 +40,8 @@ export const TasbihScreen: React.FC = () => {
   const [target, setTarget] = useState<number>(33);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState<boolean>(false);
   const [isReachedModalOpen, setIsReachedModalOpen] = useState<boolean>(false);
+  // Bouton « Libre » actif : objectif sur mesure, ou sans limite (target = 0).
+  const isFreeTarget = !TARGET_PRESETS.includes(target);
 
   const handleTap = async () => {
     const nextCount = count + 1;
@@ -155,37 +157,27 @@ export const TasbihScreen: React.FC = () => {
               style={[
                 styles.targetBtn,
                 {
-                  backgroundColor:
-                    !TARGET_PRESETS.includes(target) && target > 0
-                      ? colors.gold
-                      : colors.bgPrimary,
-                  borderColor: colors.border,
+                  backgroundColor: isFreeTarget ? colors.gold : colors.bgPrimary,
+                  borderColor: isFreeTarget ? colors.gold : colors.border,
                 },
               ]}
               onPress={() => setIsCustomModalOpen(true)}
             >
               <Ionicons
-                name="create-outline"
+                name={target === 0 ? 'infinite' : 'create-outline'}
                 size={14}
-                color={
-                  !TARGET_PRESETS.includes(target) && target > 0
-                    ? '#0F172A'
-                    : colors.gold
-                }
+                color={isFreeTarget ? '#0F172A' : colors.gold}
               />
               <Text
                 style={[
                   styles.targetBtnText,
                   {
                     marginLeft: 4,
-                    color:
-                      !TARGET_PRESETS.includes(target) && target > 0
-                        ? '#0F172A'
-                        : colors.textSecondary,
+                    color: isFreeTarget ? '#0F172A' : colors.textSecondary,
                   },
                 ]}
               >
-                {!TARGET_PRESETS.includes(target) && target > 0 ? target : 'Libre'}
+                {isFreeTarget && target > 0 ? target : 'Libre'}
               </Text>
             </TouchableOpacity>
           </ScrollView>
@@ -286,6 +278,7 @@ export const TasbihScreen: React.FC = () => {
       <CustomTargetModal
         visible={isCustomModalOpen}
         currentTarget={target}
+        isCustomTarget={isFreeTarget}
         onClose={() => setIsCustomModalOpen(false)}
         onSaveTarget={(t) => {
           setTarget(t);
