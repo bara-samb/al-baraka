@@ -4,6 +4,11 @@
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <!-- Les couleurs sont celles de l'app (thème clair/sombre choisi dans l'app) : « only »
+         interdit au navigateur de les repeindre (mode sombre forcé de Chrome Android,
+         Samsung Internet…), quel que soit le mode du téléphone ou du PC. Mis à jour par
+         ThemeContext selon le thème de l'app. -->
+    <meta name="color-scheme" content="only light" />
     <title>%WEB_TITLE%</title>
     <meta name="description" content="Le Saint Coran en riwaya Warsh, récité par Serigne Aboul Baraka Mbacké : Mushaf, écoute verset par verset, chapelet." />
 
@@ -40,6 +45,12 @@
       body {
         height: 100%;
         background-color: #0b3a2b;
+      }
+      /* Ni mode sombre forcé, ni agrandissement automatique du texte par le navigateur. */
+      html {
+        color-scheme: only light;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {

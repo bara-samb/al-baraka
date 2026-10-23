@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface ThemeColors {
@@ -113,6 +114,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const colors = isDark ? darkColors : lightColors;
+
+  // Web : le navigateur suit le thème de l'app, jamais celui du téléphone ou du PC
+  // (« only » empêche le mode sombre forcé de repeindre les couleurs de l'app).
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const scheme = isDark ? 'only dark' : 'only light';
+    document.documentElement.style.colorScheme = scheme;
+    document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colors.bgPrimary);
+  }, [isDark, colors.bgPrimary]);
 
   return (
     <ThemeContext.Provider value={{ isDark, colors, toggleTheme }}>
