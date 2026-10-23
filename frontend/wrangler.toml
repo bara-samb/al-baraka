@@ -1,9 +1,6 @@
-# Cloudflare Workers (fichiers statiques) : hébergement du site web (PWA) exporté par
-# `npm run build:web`. Déploiement : `npm run deploy:web` (voir DEPLOIEMENT.md).
-name = "al-baraka"
+# Cloudflare Pages : hébergement du site web (PWA) exporté par `npm run build:web`.
+# Déploiement : `npm run deploy:web` (voir DEPLOIEMENT.md). Sans 404.html dans `dist`, Pages
+# renvoie l'app pour toute adresse inconnue (application d'une seule page).
+name = "al-baraka-app"
 compatibility_date = "2026-10-01"
-
-[assets]
-directory = "./dist"
-# Toute adresse inconnue renvoie l'app (application d'une seule page).
-not_found_handling = "single-page-application"
+pages_build_output_dir = "./dist"

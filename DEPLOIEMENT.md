@@ -2,8 +2,8 @@
 
 - **Récitations audio (≈ 1,8 Go)** : Internet Archive (archive.org) — gratuit, sans limite de
   stockage ni de trafic ; sert les MP3 en `audio/mpeg`, avec lecture par plages et CORS ouvert.
-- **Site web (PWA)** : Cloudflare Workers (fichiers statiques, l'ex-« Pages ») — offre gratuite,
-  sans moyen de paiement. En ligne : https://al-baraka.al-baraka-mobile.workers.dev
+- **Site web (PWA)** : Cloudflare Pages — offre gratuite, sans moyen de paiement.
+  En ligne : https://al-baraka-app.pages.dev
 - **Application Android (Play Store)** : EAS Build (Expo), qui lit l'audio au même endroit.
 
 Toutes les commandes `npm run …` se lancent depuis `frontend/`.
@@ -48,20 +48,25 @@ Une seule fois :
    ```
    En cas d'erreur « CSRF » : fermer les onglets Cloudflare, couper le VPN du navigateur, se
    connecter d'abord sur https://dash.cloudflare.com, puis relancer la commande.
+3. Créer le projet Pages (déjà fait pour `al-baraka-app` ; `--force` évite que wrangler le
+   redirige vers Workers) :
+   ```bash
+   npx wrangler pages project create al-baraka-app --production-branch main --force
+   ```
 
 Puis, à chaque mise à jour du site :
 
 ```bash
-npm run deploy:web       # exporte le site puis le met en ligne (wrangler deploy)
+npm run deploy:web       # exporte le site puis le met en ligne (wrangler pages deploy)
 ```
 
-La configuration est dans `frontend/wrangler.toml` (dossier `dist`, mode « application d'une
-seule page ») et les règles de cache dans `frontend/public/_headers`.
+La configuration est dans `frontend/wrangler.toml` (dossier `dist` ; sans `404.html`, Pages
+renvoie l'app pour toute adresse inconnue) et les règles de cache dans `frontend/public/_headers`.
 
 `deploy:web` refuse de construire le site si `EXPO_PUBLIC_AUDIO_BASE_URL` n'est pas définie
 (sinon l'app chercherait l'audio sur un serveur local). L'adresse du site
 s'affiche à la fin ; un nom de domaine peut se brancher plus tard dans le tableau de bord
-Cloudflare : *Workers & Pages* → `al-baraka` → *Settings* → *Domains & Routes*.
+Cloudflare : *Workers & Pages* → `al-baraka-app` → *Custom domains*.
 
 ## 3. Application Android (Play Store)
 

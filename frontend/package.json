@@ -6,9 +6,9 @@
     "android": "npx expo start --android",
     "ios": "npx expo start --ios",
     "web": "npx expo start --web",
-    "build:web": "node scripts/check-audio-env.js && npx expo export -p web --clear",
+    "build:web": "node scripts/check-audio-env.js && npx expo export -p web --clear && node scripts/fix-pages-assets.js",
     "serve:web": "npx expo serve",
-    "deploy:web": "npm run build:web && wrangler deploy",
+    "deploy:web": "npm run build:web && wrangler pages deploy",
     "audio:upload": "python ../backend/scripts/upload-audio-archive.py"
   },
   "dependencies": {
