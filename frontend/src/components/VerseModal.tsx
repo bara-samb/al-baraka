@@ -5,8 +5,8 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from 'react-native';
+import { showAlert } from '../services/dialog';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { Ayah } from '../types/quran';
@@ -56,7 +56,7 @@ export const VerseModal: React.FC<VerseModalProps> = ({
       englishName: surahName,
     });
     setIsFav(status);
-    Alert.alert(
+    showAlert(
       status ? 'Favori ajouté' : 'Favori retiré',
       status
         ? `Le verset ${ayah.numberInSurah} a été ajouté à vos favoris.`
@@ -76,7 +76,7 @@ export const VerseModal: React.FC<VerseModalProps> = ({
     textToCopy += `\n\n[${surahName} - Verset ${ayah.numberInSurah}]`;
     await Clipboard.setStringAsync(textToCopy);
     onClose();
-    Alert.alert('Succès', 'Le verset a été copié dans le presse-papier !');
+    showAlert('Succès', 'Le verset a été copié dans le presse-papier !');
   };
 
   const handlePlaySingleVerse = () => {

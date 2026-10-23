@@ -6,11 +6,11 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  Alert,
   Vibration,
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import { showAlert } from '../services/dialog';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
@@ -68,7 +68,7 @@ export const TasbihScreen: React.FC = () => {
   };
 
   const handleResetCount = () => {
-    Alert.alert(
+    showAlert(
       'Réinitialiser le compteur',
       'Remettre à zéro le compteur de Zikr ?',
       [

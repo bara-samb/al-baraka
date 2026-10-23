@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Alert,
 } from 'react-native';
+import { showAlert } from '../services/dialog';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getSurahDetails, WARSH_BASMALA, shouldShowBasmalaHeader } from '../services/quranService';
@@ -105,7 +105,7 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
 
   const handleDownloadToggle = async () => {
     if (isDownloaded) {
-      Alert.alert(
+      showAlert(
         'Supprimer l\'audio local',
         `Voulez-vous supprimer le fichier audio hors-ligne de la Sourate ${englishName} ?`,
         [
@@ -129,9 +129,9 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
       setIsDownloading(false);
       if (success) {
         setIsDownloaded(true);
-        Alert.alert('Succès', `La Sourate ${englishName} est désormais disponible hors-ligne !`);
+        showAlert('Succès', `La Sourate ${englishName} est désormais disponible hors-ligne !`);
       } else {
-        Alert.alert('Erreur', 'Impossible de télécharger le fichier audio. Vérifiez le serveur backend.');
+        showAlert('Erreur', 'Impossible de télécharger le fichier audio. Vérifiez le serveur backend.');
       }
     }
   };
@@ -189,7 +189,7 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
         reciter: 'Serigne Aboul Baraka Mbacké',
       });
     } else {
-      Alert.alert(
+      showAlert(
         'Audio indisponible',
         `L'audio de ce verset n'est pas disponible pour l'instant.`
       );
