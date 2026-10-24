@@ -69,7 +69,7 @@ const TAB_BAR_SPACE = 84;
 
 const verseKey = (v: { surah: number; ayah: number }) => `${v.surah}:${v.ayah}`;
 
-export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
+export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
   const { isDark } = useTheme();
   const p = isDark ? mushafDark : mushafLight;
   const { width } = useWindowDimensions();
@@ -120,7 +120,14 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
       getSurahList()
         .then((list) => setRevelationTypes(Object.fromEntries(list.map((s) => [s.number, s.revelationType]))))
         .catch(() => {});
-      // Rouvre le Mushaf à la dernière page lue (ou au début de la dernière sourate lue).
+      // Verset demandé depuis l'accueil, sinon la dernière page lue (ou le début de la
+      // dernière sourate lue).
+      const requested = route.params && getMushafVerse(route.params.surah, route.params.ayah);
+      if (requested) {
+        setFoundVerse(requested);
+        openAt(requested.page);
+        return;
+      }
       const lastPage = await getMushafLastPage();
       if (lastPage) {
         openAt(lastPage);
@@ -130,6 +137,16 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = () => {
       openAt(lastRead ? pageOfVerse(lastRead.surahNumber, 1) : 1);
     })();
   }, []);
+
+  // Verset demandé depuis l'accueil (« Reprendre », « Verset du jour ») alors que le Mushaf
+  // est déjà ouvert.
+  useEffect(() => {
+    if (!route.params || pageRef.current === null) return;
+    const v = getMushafVerse(route.params.surah, route.params.ayah);
+    if (!v) return;
+    setFoundVerse(v);
+    goToPage(v.page);
+  }, [route.params?.at]);
 
   // Taille du texte changée depuis les paramètres de l'accueil.
   useEffect(() => subscribeFontSizeChange(setFontSize), []);

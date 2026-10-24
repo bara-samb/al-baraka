@@ -5,7 +5,8 @@ export type MainTabParamList = {
   HomeTab: undefined;
   // Sourate et verset à reprendre (« Reprendre la lecture ») ; `at` distingue deux demandes identiques.
   AudioTab: { surah: number; ayah: number; at?: number } | undefined;
-  MushafTab: undefined;
+  // Verset à afficher (surligné) en ouvrant le Mushaf ; `at` distingue deux demandes identiques.
+  MushafTab: { surah: number; ayah: number; at?: number } | undefined;
   TasbihTab: undefined;
   SadaqahTab: undefined;
 };

@@ -171,7 +171,7 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
             <Ionicons
               name={isPlayingThis ? 'pause-circle' : 'play-circle'}
               size={32}
-              color={isSelected ? colors.gold : colors.textSecondary}
+              color={colors.gold}
             />
           </TouchableOpacity>
         </View>
@@ -185,7 +185,7 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
 
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.bgPrimary, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.gold }]}>LECTEUR AUDIO</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Lecteur audio</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Récitation intégrale par Serigne Aboul Baraka Mbacké (Warsh)
         </Text>
@@ -290,9 +290,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    letterSpacing: 1.5,
   },
   subtitle: {
     fontSize: 12,

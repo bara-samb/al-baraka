@@ -93,7 +93,7 @@ export const TasbihScreen: React.FC = () => {
         {/* En-tête avec basculement de Thème */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View>
-            <Text style={[styles.title, { color: colors.gold }]}>CHAPELET ÉLECTRONIQUE</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>Chapelet</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Compteur de Zikr • AL BARAKA
             </Text>
@@ -321,9 +321,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    letterSpacing: 1.2,
   },
   subtitle: {
     fontSize: 12,
