@@ -24,8 +24,8 @@ jobs:
       run:
         working-directory: frontend
     env:
-      # Adresse publique (non secrète) des récitations sur Internet Archive.
-      EXPO_PUBLIC_AUDIO_BASE_URL: https://archive.org/download/al-baraka-serigne-aboul-baraka-mbacke-warsh/audios/serigne-aboul-baraka-mbacke/
+      # Adresse publique (non secrète) des récitations : Cloudflare R2, servies par le site.
+      EXPO_PUBLIC_AUDIO_BASE_URL: https://al-baraka-app.pages.dev/audio/serigne-aboul-baraka-mbacke/
     steps:
       - uses: actions/checkout@v5
 

@@ -1,14 +1,41 @@
-# Déploiement d'AL BARAKA (gratuit, sans carte bancaire)
+# Déploiement d'AL BARAKA (gratuit)
 
-- **Récitations audio (≈ 1,8 Go)** : Internet Archive (archive.org) — gratuit, sans limite de
-  stockage ni de trafic ; sert les MP3 en `audio/mpeg`, avec lecture par plages et CORS ouvert.
+- **Récitations audio (≈ 1,8 Go)** : Cloudflare R2 (offre gratuite jusqu'à 10 Go, carte
+  bancaire enregistrée mais rien n'est prélevé), servies par le site lui-même à l'adresse
+  `/audio/…` (fonction `frontend/functions/audio/[[path]].js`, lecture par plages). Démarrage
+  rapide, y compris au milieu d'une longue sourate. Copie de secours sur Internet Archive
+  (archive.org), gratuite mais lente (souvent 5 à 10 s avant le premier son).
 - **Site web (PWA)** : Cloudflare Pages — offre gratuite, sans moyen de paiement.
   En ligne : https://al-baraka-app.pages.dev
 - **Application Android (Play Store)** : EAS Build (Expo), qui lit l'audio au même endroit.
 
 Toutes les commandes `npm run …` se lancent depuis `frontend/`.
 
-## 1. Audio sur archive.org
+## 1. Audio sur Cloudflare R2
+
+Une seule fois (déjà fait) : activer R2 dans le tableau de bord Cloudflare, puis créer l'espace :
+
+```bash
+npx wrangler r2 bucket create al-baraka-audio
+```
+
+Le lien entre le site et cet espace est déclaré dans `frontend/wrangler.toml` (`[[r2_buckets]]`,
+nom `AUDIO`). Envoyer les fichiers (relançable sans risque : ceux déjà envoyés, notés avec leur
+taille dans `backend/uploads/.r2-uploaded.txt`, sont ignorés) :
+
+```bash
+npm run audio:upload:r2
+```
+
+Les MP3 de `backend/uploads/audios/serigne-aboul-baraka-mbacke/` sont lus par le site à l'adresse :
+
+```
+EXPO_PUBLIC_AUDIO_BASE_URL=https://al-baraka-app.pages.dev/audio/serigne-aboul-baraka-mbacke/
+```
+
+(dans `frontend/.env`, dans `.github/workflows/deploy-web.yml` et pour EAS, voir plus bas).
+
+## 1 bis. Copie de secours sur archive.org
 
 Une seule fois :
 
@@ -31,10 +58,10 @@ Les MP3 sont lus dans `backend/uploads/audios/` et publiés dans l'élément
 (`audios/serigne-aboul-baraka-mbacke/NNN.mp3`, `audios/azan/touba.mp3`). Un nouvel élément peut
 mettre quelques minutes à être accessible.
 
-Enfin, créer `frontend/.env` à partir de `frontend/.env.example` avec l'adresse affichée à la fin :
+Pour revenir à archive.org en cas de besoin, utiliser cette adresse dans `EXPO_PUBLIC_AUDIO_BASE_URL` :
 
 ```
-EXPO_PUBLIC_AUDIO_BASE_URL=https://archive.org/download/al-baraka-serigne-aboul-baraka-mbacke-warsh/audios/serigne-aboul-baraka-mbacke/
+https://archive.org/download/al-baraka-serigne-aboul-baraka-mbacke-warsh/audios/serigne-aboul-baraka-mbacke/
 ```
 
 ## 2. Site web sur Cloudflare
@@ -88,7 +115,7 @@ navigateur → « Installer l'application » / « Ajouter à l'écran d'accueil 
 npm install -g eas-cli
 eas login
 eas init                                  # relie le projet à votre compte Expo (gratuit)
-eas env:create --environment production --name EXPO_PUBLIC_AUDIO_BASE_URL --value "https://archive.org/download/al-baraka-serigne-aboul-baraka-mbacke-warsh/audios/serigne-aboul-baraka-mbacke/" --visibility plaintext
+eas env:create --environment production --environment preview --name EXPO_PUBLIC_AUDIO_BASE_URL --value "https://al-baraka-app.pages.dev/audio/serigne-aboul-baraka-mbacke/" --visibility plaintext
 eas build -p android --profile preview    # APK à installer directement pour tester (gratuit)
 eas build -p android --profile production # fichier .aab pour le Play Store
 eas submit -p android                     # envoi vers la Play Console
@@ -100,7 +127,8 @@ audio est déclarée avec `eas env:create`.
 ## Mettre à jour
 
 - **Code ou textes** : `npm run deploy:web` (site) et `eas build` (Android).
-- **Un MP3 corrigé** : le remplacer dans `backend/uploads/audios/`, puis `npm run audio:upload`
-  (seuls les fichiers modifiés sont renvoyés).
+- **Un MP3 corrigé** : le remplacer dans `backend/uploads/audios/`, puis `npm run audio:upload:r2`
+  (fichiers dont la taille a changé ; si elle est identique, retirer sa ligne de
+  `backend/uploads/.r2-uploaded.txt`) et `npm run audio:upload` (copie archive.org).
 - **Minutages des versets** (après changement d'audio) : voir
   `backend/scripts/generate-ayah-timings.js`, puis redéployer.

@@ -4,3 +4,8 @@
 name = "al-baraka-app"
 compatibility_date = "2026-10-01"
 pages_build_output_dir = "./dist"
+
+# Récitations stockées dans Cloudflare R2, servies par functions/audio/[[path]].js.
+[[r2_buckets]]
+binding = "AUDIO"
+bucket_name = "al-baraka-audio"

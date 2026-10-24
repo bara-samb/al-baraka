@@ -9,7 +9,8 @@
     "build:web": "node scripts/check-audio-env.js && npx expo export -p web --clear && node scripts/fix-pages-assets.js",
     "serve:web": "npx expo serve",
     "deploy:web": "npm run build:web && wrangler pages deploy",
-    "audio:upload": "python ../backend/scripts/upload-audio-archive.py"
+    "audio:upload": "python ../backend/scripts/upload-audio-archive.py",
+    "audio:upload:r2": "node scripts/upload-audio-r2.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
