@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import ayahTimingsData from '../data/ayahTimings.json';
 import { surahNameAr, surahNameLatin } from './warshMushafService';
+import { saveLastListenPosition } from './bookmarkService';
 
 interface AyahTimingEntry {
   totalDuration: number;
@@ -28,6 +29,10 @@ let currentListeners: Array<(status: SoundStatus) => void> = [];
 // Position (s) à laquelle mettre en pause automatiquement, pour confiner la lecture à un
 // seul verset (voir playAyahOnly). null = lecture normale, sans limite.
 let stopAtSeconds: number | null = null;
+// Instant de départ demandé, pas encore atteint : certains navigateurs mobiles ignorent la
+// position donnée avant le chargement et partent du début de la sourate. Tant que la lecture
+// n'y est pas, on l'y replace (voir onPlaybackStatusUpdate).
+let pendingStartSeconds: number | null = null;
 
 /**
  * Bornes précises (en secondes) d'un verset au sein du fichier audio de sa sourate,
@@ -117,9 +122,22 @@ export const initAudioMode = async (): Promise<void> => {
  * navigateur et sur les écouteurs Bluetooth (Media Session), avec lecture/pause et ±10 s.
  * Le numéro de sourate est lu dans le nom du fichier (NNN.mp3).
  */
+// Numéro de sourate d'après le nom du fichier audio (NNN.mp3).
+const surahOfUrl = (url: string | null): number => Number(url?.match(/(\d{3})\.mp3(?:\?.*)?$/)?.[1]) || 0;
+
+// « Reprendre l'écoute » : position notée toutes les 5 s pendant une écoute suivie (pas pour
+// un verset écouté seul, comme le verset du jour).
+let lastListenSaveAt = 0;
+const trackListening = (positionSec: number) => {
+  const surah = surahOfUrl(lastUrl);
+  if (!surah || stopAtSeconds !== null || Date.now() - lastListenSaveAt < 5000) return;
+  lastListenSaveAt = Date.now();
+  saveLastListenPosition(surah, getAyahAtPosition(surah, positionSec) ?? 1);
+};
+
 const showNowPlaying = (url: string): void => {
   if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
-  const surah = Number(url.match(/(\d{3})\.mp3(?:\?.*)?$/)?.[1]);
+  const surah = surahOfUrl(url);
   if (!surah) return;
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -188,6 +206,8 @@ export const playAudioTrack = async (url: string, startRatio: number = 0, startS
 
     currentSound = sound;
     lastUrl = url;
+    lastListenSaveAt = 0;
+    pendingStartSeconds = startSeconds > 1 ? startSeconds : null;
     showNowPlaying(url);
 
     if (startRatio > 0 && status.isLoaded && status.durationMillis) {
@@ -256,6 +276,7 @@ export const playAyahOnly = async (
 
     currentSound = sound;
     stopAtSeconds = bounds.endSec;
+    pendingStartSeconds = bounds.startSec > 1 ? bounds.startSec : null;
     lastUrl = url;
     showNowPlaying(url);
 
@@ -299,6 +320,15 @@ const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
   if (status.isLoaded) {
     const positionSec = status.positionMillis / 1000;
 
+    if (pendingStartSeconds !== null && (status.durationMillis || 0) > 0) {
+      if (positionSec >= pendingStartSeconds - 1) {
+        pendingStartSeconds = null;
+      } else {
+        currentSound?.setPositionAsync(pendingStartSeconds * 1000).catch(() => {});
+        return; // position erronée : ni pause de fin de verset ni affichage
+      }
+    }
+
     if (stopAtSeconds !== null && status.isPlaying && positionSec >= stopAtSeconds) {
       const boundary = stopAtSeconds;
       stopAtSeconds = null;
@@ -311,6 +341,8 @@ const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
       });
       return;
     }
+
+    if (status.isPlaying) trackListening(positionSec);
 
     notifyListeners({
       isPlaying: status.isPlaying,
@@ -369,6 +401,7 @@ export const togglePlayPause = async (): Promise<void> => {
 export const seekBy = async (secondsDelta: number): Promise<void> => {
   if (!currentSound) return;
   stopAtSeconds = null; // un seek manuel sort du mode "verset unique"
+  pendingStartSeconds = null;
   try {
     const status = await currentSound.getStatusAsync();
     if (status.isLoaded) {
@@ -386,6 +419,7 @@ export const seekBy = async (secondsDelta: number): Promise<void> => {
 export const seekToPosition = async (seconds: number): Promise<void> => {
   if (!currentSound) return;
   stopAtSeconds = null; // un seek manuel sort du mode "verset unique"
+  pendingStartSeconds = null;
   try {
     const status = await currentSound.getStatusAsync();
     if (status.isLoaded) {
@@ -414,6 +448,7 @@ export const setPlaybackRate = async (rate: number): Promise<void> => {
  */
 export const stopAudioTrack = async (): Promise<void> => {
   stopAtSeconds = null;
+  pendingStartSeconds = null;
   if (currentSound) {
     try {
       await currentSound.stopAsync();

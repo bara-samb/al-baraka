@@ -5,8 +5,9 @@ export type MainTabParamList = {
   HomeTab: undefined;
   // Sourate et verset à reprendre (« Reprendre la lecture ») ; `at` distingue deux demandes identiques.
   AudioTab: { surah: number; ayah: number; at?: number } | undefined;
-  // Verset à afficher (surligné) en ouvrant le Mushaf ; `at` distingue deux demandes identiques.
-  MushafTab: { surah: number; ayah: number; at?: number } | undefined;
+  // Verset à afficher en ouvrant le Mushaf (surligné sauf `highlight: false`, pour reprendre
+  // la lecture) ; `at` distingue deux demandes identiques.
+  MushafTab: { surah: number; ayah: number; at?: number; highlight?: boolean } | undefined;
   TasbihTab: undefined;
   SadaqahTab: undefined;
 };
@@ -21,6 +22,8 @@ export type RootStackParamList = {
   };
   Search: undefined;
   Favorites: undefined;
+  // Page d'un verset (verset du jour) : texte, traductions, écoute et partage.
+  Verse: { surah: number; ayah: number; title?: string };
 };
 
 export type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'MainTabs'>;
@@ -32,3 +35,4 @@ export type TasbihTabScreenProps = BottomTabScreenProps<MainTabParamList, 'Tasbi
 export type SadaqahTabScreenProps = BottomTabScreenProps<MainTabParamList, 'SadaqahTab'>;
 export type SearchScreenProps = NativeStackScreenProps<RootStackParamList, 'Search'>;
 export type FavoritesScreenProps = NativeStackScreenProps<RootStackParamList, 'Favorites'>;
+export type VerseScreenProps = NativeStackScreenProps<RootStackParamList, 'Verse'>;

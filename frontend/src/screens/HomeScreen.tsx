@@ -12,13 +12,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import {
+  getLastListenPosition,
   getLastReadPosition,
   subscribeBookmarkChange,
+  subscribeListenChange,
+  LastListenPosition,
   LastReadBookmark,
 } from '../services/bookmarkService';
 import { getTodayFormattedDates } from '../services/hijriService';
 import { getArabicFontSize, setArabicFontSize, subscribeFontSizeChange } from '../services/settingsService';
-import { MUSHAF_VERSES, MushafVerse, surahNameAr, surahNameLatin } from '../services/warshMushafService';
+import { MUSHAF_VERSES, MushafVerse, pageOfVerse, surahNameLatin } from '../services/warshMushafService';
 import { playAyahOnly, stopAudioTrack, subscribeAudioStatus } from '../services/audioService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
 import { SettingsModal } from '../components/SettingsModal';
@@ -27,9 +30,9 @@ import { SadaqahModal } from '../components/SadaqahModal';
 
 const reciterPhoto = require('../assets/serigne_abdou_bara.jpg');
 
-// Verset du jour : un verset court (ni lettres isolées, ni passage qui allongerait la carte),
-// le même pour tout le monde pendant une journée.
-const DAILY_CANDIDATES = MUSHAF_VERSES.filter((v) => v.text.length >= 50 && v.text.length <= 120);
+// Verset du jour : tout verset sauf les plus brefs (lettres isolées), le même pour tout le
+// monde pendant une journée. La carte n'en montre que le début (« Voir plus »).
+const DAILY_CANDIDATES = MUSHAF_VERSES.filter((v) => v.text.length >= 50);
 const verseOfTheDay = (): MushafVerse => {
   const now = new Date();
   const day = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
@@ -40,7 +43,8 @@ const verseOfTheDay = (): MushafVerse => {
 export const HomeScreen: React.FC<any> = ({ navigation }) => {
   const { colors, isDark, toggleTheme } = useTheme();
 
-  const [lastBookmark, setLastBookmark] = useState<LastReadBookmark | null>(null);
+  const [lastRead, setLastRead] = useState<LastReadBookmark | null>(null);
+  const [lastListen, setLastListen] = useState<LastListenPosition | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isContactOpen, setIsContactOpen] = useState<boolean>(false);
   const [isSadaqahOpen, setIsSadaqahOpen] = useState<boolean>(false);
@@ -52,28 +56,28 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
   const daily = verseOfTheDay();
 
   useEffect(() => {
-    getLastReadPosition().then(setLastBookmark);
+    getLastReadPosition().then(setLastRead);
+    getLastListenPosition().then(setLastListen);
     getArabicFontSize().then(setArabicFontSizeState);
-    const unsub = subscribeBookmarkChange(setLastBookmark);
+    const unsub = subscribeBookmarkChange(setLastRead);
+    const unsubListen = subscribeListenChange(setLastListen);
     const unsubFont = subscribeFontSizeChange(setArabicFontSizeState);
     const unsubAudio = subscribeAudioStatus((status) => {
       if (!status.isPlaying) setDailyPlaying(false);
     });
     return () => {
       unsub();
+      unsubListen();
       unsubFont();
       unsubAudio();
     };
   }, []);
 
   // Sans historique, « Reprendre » propose de commencer par Al-Fatiha.
-  const resumeSurah = lastBookmark?.surahNumber ?? 1;
-  const resumeAyah = lastBookmark?.verseNumber ?? 1;
-
   const listen = (surah: number, ayah: number) =>
     navigation.navigate('AudioTab', { surah, ayah, at: Date.now() });
   const read = (surah: number, ayah: number) =>
-    navigation.navigate('MushafTab', { surah, ayah, at: Date.now() });
+    navigation.navigate('MushafTab', { surah, ayah, at: Date.now(), highlight: false });
 
   const toggleDailyVerse = async () => {
     if (dailyPlaying) {
@@ -134,49 +138,67 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Reprendre */}
+        {/* Reprendre : l'écoute et la lecture du Mushaf ont chacune leur position */}
         <View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
-          <Text style={[styles.cardLabel, { color: colors.gold }]}>{lastBookmark ? 'REPRENDRE' : 'COMMENCER'}</Text>
-          <View style={styles.resumeRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.resumeTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                {surahNameLatin(resumeSurah)}
-              </Text>
-              <Text style={[styles.resumeSub, { color: colors.textSecondary }]}>
-                Sourate {resumeSurah} · verset {resumeAyah}
-              </Text>
-            </View>
-            <Text style={[styles.resumeArabic, { color: colors.emerald }]} numberOfLines={1}>
-              {surahNameAr(resumeSurah)}
-            </Text>
-          </View>
-          <View style={styles.actionsRow}>
+          <Text style={[styles.cardLabel, { color: colors.gold }]}>
+            {lastListen || lastRead ? 'REPRENDRE' : 'COMMENCER'}
+          </Text>
+          {[
+            {
+              key: 'listen',
+              icon: 'headset' as const,
+              label: "L'écoute",
+              surah: lastListen?.surahNumber ?? 1,
+              detail: `verset ${lastListen?.verseNumber ?? 1}`,
+              action: 'Écouter',
+              onPress: () => listen(lastListen?.surahNumber ?? 1, lastListen?.verseNumber ?? 1),
+            },
+            {
+              key: 'read',
+              icon: 'book' as const,
+              label: 'La lecture',
+              surah: lastRead?.surahNumber ?? 1,
+              detail: `page ${pageOfVerse(lastRead?.surahNumber ?? 1, lastRead?.verseNumber ?? 1)}`,
+              action: 'Lire',
+              onPress: () => read(lastRead?.surahNumber ?? 1, lastRead?.verseNumber ?? 1),
+            },
+          ].map((r, i) => (
             <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: colors.gold }]}
-              onPress={() => listen(resumeSurah, resumeAyah)}
-              activeOpacity={0.85}
+              key={r.key}
+              style={[styles.resumeRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
+              onPress={r.onPress}
+              activeOpacity={0.8}
             >
-              <Ionicons name="play" size={16} color={colors.onGold} />
-              <Text style={[styles.btnText, { color: colors.onGold }]}>Écouter</Text>
+              <View style={[styles.rowIcon, { backgroundColor: colors.goldTint }]}>
+                <Ionicons name={r.icon} size={18} color={colors.gold} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.resumeSub, { color: colors.textSecondary }]}>{r.label}</Text>
+                <Text style={[styles.resumeTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {surahNameLatin(r.surah)} · {r.detail}
+                </Text>
+              </View>
+              <View style={[styles.smallBtn, { backgroundColor: i === 0 ? colors.gold : 'transparent', borderColor: colors.gold }]}>
+                <Text style={[styles.smallBtnText, { color: i === 0 ? colors.onGold : colors.gold }]}>{r.action}</Text>
+              </View>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.secondaryBtn, { borderColor: colors.gold }]}
-              onPress={() => read(resumeSurah, resumeAyah)}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="book-outline" size={16} color={colors.gold} />
-              <Text style={[styles.btnText, { color: colors.gold }]}>Lire</Text>
-            </TouchableOpacity>
-          </View>
+          ))}
         </View>
 
-        {/* Verset du jour */}
-        <View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
+        {/* Verset du jour : un toucher ouvre sa page (texte entier, traductions, partage) */}
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+          onPress={() => navigation.navigate('Verse', { surah: daily.surah, ayah: daily.ayah })}
+          activeOpacity={0.85}
+        >
           <Text style={[styles.cardLabel, { color: colors.gold }]}>VERSET DU JOUR</Text>
-          <Text style={[styles.dailyArabic, { color: colors.textPrimary }]}>{daily.text}</Text>
+          <Text style={[styles.dailyArabic, { color: colors.textPrimary }]} numberOfLines={2}>
+            {daily.text}
+          </Text>
           <View style={styles.dailyFooter}>
             <Text style={[styles.dailyRef, { color: colors.textSecondary }]} numberOfLines={1}>
               {surahNameLatin(daily.surah)} · {daily.surah}:{daily.ayah}
+              <Text style={{ color: colors.gold, fontWeight: 'bold' }}>  ·  Voir plus</Text>
             </Text>
             <TouchableOpacity
               accessibilityLabel={dailyPlaying ? 'Arrêter le verset' : 'Écouter le verset'}
@@ -185,15 +207,8 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
             >
               <Ionicons name={dailyPlaying ? 'stop' : 'play'} size={16} color={colors.gold} />
             </TouchableOpacity>
-            <TouchableOpacity
-              accessibilityLabel="Lire dans le Mushaf"
-              style={[styles.roundBtn, { backgroundColor: colors.goldTint }]}
-              onPress={() => read(daily.surah, daily.ayah)}
-            >
-              <Ionicons name="book-outline" size={16} color={colors.gold} />
-            </TouchableOpacity>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Raccourci absent de la barre d'onglets */}
         <TouchableOpacity
@@ -314,49 +329,27 @@ const styles = StyleSheet.create({
   resumeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    gap: 12,
+    paddingVertical: 10,
   },
   resumeTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: 'bold',
+    marginTop: 1,
   },
   resumeSub: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11.5,
   },
-  resumeArabic: {
-    fontFamily: 'KFGQPC_Warsh',
-    fontSize: 26,
-    lineHeight: 44,
-    marginLeft: 10,
-    maxWidth: '45%',
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 14,
-  },
-  primaryBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 44,
-    borderRadius: 12,
-  },
-  secondaryBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 44,
-    borderRadius: 12,
+  smallBtn: {
+    paddingHorizontal: 14,
+    height: 34,
+    borderRadius: 10,
     borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  btnText: {
-    fontSize: 14,
+  smallBtnText: {
+    fontSize: 13,
     fontWeight: 'bold',
   },
   dailyArabic: {

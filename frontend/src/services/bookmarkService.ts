@@ -126,3 +126,43 @@ export const saveMushafLastPage = async (page: number): Promise<void> => {
     console.error('Erreur saveMushafLastPage:', e);
   }
 };
+
+/**
+ * Dernière écoute (Lecteur ou récitation lancée depuis le Mushaf), distincte de la dernière
+ * lecture : « Reprendre l'écoute » et « Reprendre la lecture » sont deux actions séparées.
+ */
+export interface LastListenPosition {
+  surahNumber: number;
+  /** Numérotation du Mushaf Warsh. */
+  verseNumber: number;
+  updatedAt: number;
+}
+
+const LISTEN_KEY = '@albaraka_last_listen';
+let listenListeners: Array<(position: LastListenPosition | null) => void> = [];
+
+export const subscribeListenChange = (callback: (position: LastListenPosition | null) => void) => {
+  listenListeners.push(callback);
+  return () => {
+    listenListeners = listenListeners.filter((cb) => cb !== callback);
+  };
+};
+
+export const getLastListenPosition = async (): Promise<LastListenPosition | null> => {
+  try {
+    const json = await AsyncStorage.getItem(LISTEN_KEY);
+    return json ? JSON.parse(json) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const saveLastListenPosition = async (surahNumber: number, verseNumber: number): Promise<void> => {
+  const position: LastListenPosition = { surahNumber, verseNumber, updatedAt: Date.now() };
+  try {
+    await AsyncStorage.setItem(LISTEN_KEY, JSON.stringify(position));
+    listenListeners.forEach((cb) => cb(position));
+  } catch (e) {
+    console.error('Erreur saveLastListenPosition:', e);
+  }
+};

@@ -13,6 +13,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   useWindowDimensions,
+  Image,
 } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -68,6 +69,8 @@ const PAGE_NUMBERS = Array.from({ length: MUSHAF_PAGE_COUNT }, (_, i) => MUSHAF_
 const indexOfPage = (page: number) => MUSHAF_PAGE_COUNT - page;
 // Barre d'onglets flottante (bottom 12 + hauteur 68) : le Mushaf s'arrête au-dessus.
 const TAB_BAR_SPACE = 84;
+
+const reciterPhoto = require('../assets/serigne_abdou_bara.jpg');
 
 const verseKey = (v: { surah: number; ayah: number }) => `${v.surah}:${v.ayah}`;
 
@@ -126,7 +129,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
       // dernière sourate lue).
       const requested = route.params && getMushafVerse(route.params.surah, route.params.ayah);
       if (requested) {
-        setFoundVerse(requested);
+        if (route.params?.highlight !== false) setFoundVerse(requested);
         openAt(requested.page);
         return;
       }
@@ -146,7 +149,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
     if (!route.params || pageRef.current === null) return;
     const v = getMushafVerse(route.params.surah, route.params.ayah);
     if (!v) return;
-    setFoundVerse(v);
+    setFoundVerse(route.params.highlight === false ? null : v);
     goToPage(v.page);
   }, [route.params?.at]);
 
@@ -408,18 +411,25 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
           ]}
         >
           <TouchableOpacity
-            style={styles.topSide}
+            style={[styles.topSide, styles.topLeft]}
             onPress={() => {
               setIndexTab('juz');
               setIndexVisible(true);
             }}
           >
-            <Text style={[styles.topSideText, { color: p.title }]} numberOfLines={1}>
-              {juzNameAr(firstVerse.juz)}
-            </Text>
-            <Text style={[styles.topSideSub, { color: p.muted }]} numberOfLines={1}>
-              {hizbLabelAr(firstVerse.eighth)}
-            </Text>
+            <Image
+              source={reciterPhoto}
+              style={[styles.topPhoto, { borderColor: p.gold }]}
+              accessibilityLabel="Serigne Aboul Baraka Mbacké"
+            />
+            <View style={{ flexShrink: 1 }}>
+              <Text style={[styles.topSideText, { color: p.title }]} numberOfLines={1}>
+                {juzNameAr(firstVerse.juz)}
+              </Text>
+              <Text style={[styles.topSideSub, { color: p.muted }]} numberOfLines={1}>
+                {hizbLabelAr(firstVerse.eighth)}
+              </Text>
+            </View>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.topCenter}
@@ -612,7 +622,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   topSide: {
-    width: 100,
+    width: 116,
+  },
+  topLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  topPhoto: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
   },
   topSideText: {
     fontFamily: 'KFGQPC_Warsh',

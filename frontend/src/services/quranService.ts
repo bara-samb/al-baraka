@@ -274,3 +274,24 @@ const formatSearchResults = (query: string, data: any): SearchOccurrenceStats =>
     results,
   };
 };
+
+/**
+ * Traduction française (Hamidullah) d'un verset Warsh : les versets Hafs correspondants,
+ * réunis. null si l'API est injoignable.
+ */
+export const getFrenchVerseTranslation = async (surahNumber: number, warshAyah: number): Promise<string | null> => {
+  const [first, last] = warshToHafs(surahNumber, warshAyah);
+  try {
+    const parts = await Promise.all(
+      Array.from({ length: last - first + 1 }, (_, i) =>
+        fetch(`${BASE_URL}/ayah/${surahNumber}:${first + i}/fr.hamidullah`)
+          .then((r) => r.json())
+          .then((json: ApiResponse<{ text: string }>) => json.data.text)
+      )
+    );
+    return parts.join(' ');
+  } catch (e) {
+    console.warn('getFrenchVerseTranslation : API injoignable.', e);
+    return null;
+  }
+};
