@@ -113,7 +113,7 @@ const MushafPageComponent: React.FC<MushafPageProps> = ({
   };
 
   return (
-    <View style={{ width, height, paddingHorizontal: 8, paddingVertical: 8 }}>
+    <View style={{ width, height, paddingHorizontal: 4, paddingVertical: 4 }}>
       <Pressable style={[styles.page, { backgroundColor: p.page }]} onPress={onBackgroundPress}>
         <PageFrame palette={p} />
         {bookmarked && <BookmarkRibbon palette={p} style={styles.ribbon} />}
@@ -144,7 +144,7 @@ const MushafPageComponent: React.FC<MushafPageProps> = ({
                     palette={p}
                   />
                   {g.surah !== 9 && (
-                    <Text style={[styles.basmala, { color: p.title, fontSize: size, lineHeight: size * 1.9 }]}>
+                    <Text style={[styles.basmala, { color: p.title, fontSize: size, lineHeight: size * 1.5 }]}>
                       {WARSH_BASMALA}
                     </Text>
                   )}
@@ -152,7 +152,7 @@ const MushafPageComponent: React.FC<MushafPageProps> = ({
               ) : (
                 <Text
                   key={`t${g.verses[0].surah}:${g.verses[0].ayah}`}
-                  style={[styles.arabic, { color: p.ink, fontSize: size, lineHeight: size * 2.05 }, isOpeningPage && styles.arabicCentered]}
+                  style={[styles.arabic, { color: p.ink, fontSize: size, lineHeight: size * 1.55 }, isOpeningPage && styles.arabicCentered]}
                 >
                   {g.verses.map((v) => {
                     const key = `${v.surah}:${v.ayah}`;

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ARABIC_FONT_SIZE_KEY = '@albaraka_arabic_font_size';
 
-export const DEFAULT_ARABIC_FONT_SIZE = 24;
+export const DEFAULT_ARABIC_FONT_SIZE = 28;
 export const MIN_ARABIC_FONT_SIZE = 18;
 export const MAX_ARABIC_FONT_SIZE = 38;
 

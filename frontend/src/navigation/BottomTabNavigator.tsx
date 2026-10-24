@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { MainTabParamList } from './types';
@@ -9,6 +9,7 @@ import { AudioPlayerScreen } from '../screens/AudioPlayerScreen';
 import { MushafScreen } from '../screens/MushafScreen';
 import { TasbihScreen } from '../screens/TasbihScreen';
 import { SadaqahModal } from '../components/SadaqahModal';
+import { subscribeImmersive } from '../services/immersiveMode';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -28,10 +29,28 @@ const DummySadaqahScreen: React.FC = () => {
 const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const { colors } = useTheme();
   const [sadaqahModalVisible, setSadaqahModalVisible] = useState<boolean>(false);
+  // Lecture plein écran du Mushaf : la barre glisse hors de l'écran.
+  const [hidden, setHidden] = useState(false);
+  const hideAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => subscribeImmersive(setHidden), []);
+  useEffect(() => {
+    Animated.timing(hideAnim, { toValue: hidden ? 1 : 0, duration: 200, useNativeDriver: true }).start();
+  }, [hidden, hideAnim]);
 
   return (
     <>
-      <View style={[styles.tabBarContainer, { backgroundColor: colors.tabBarBg, borderColor: colors.tabBarBorder }]}>
+      <Animated.View
+        pointerEvents={hidden ? 'none' : 'auto'}
+        style={[
+          styles.tabBarContainer,
+          {
+            backgroundColor: colors.tabBarBg,
+            borderColor: colors.tabBarBorder,
+            opacity: hideAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+            transform: [{ translateY: hideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 100] }) }],
+          },
+        ]}
+      >
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
@@ -115,7 +134,7 @@ const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, n
             </TouchableOpacity>
           );
         })}
-      </View>
+      </Animated.View>
 
       {/* Modal Sadaqah ouverte au clic sur l'onglet Sadaqah */}
       <SadaqahModal

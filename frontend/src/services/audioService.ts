@@ -22,6 +22,8 @@ export interface SoundStatus {
 }
 
 let currentSound: Audio.Sound | null = null;
+// Dernière piste lancée : « Lecture » la relance une fois le son libéré (fin de sourate).
+let lastUrl: string | null = null;
 let currentListeners: Array<(status: SoundStatus) => void> = [];
 // Position (s) à laquelle mettre en pause automatiquement, pour confiner la lecture à un
 // seul verset (voir playAyahOnly). null = lecture normale, sans limite.
@@ -136,9 +138,16 @@ const showNowPlaying = (url: string): void => {
   } catch {}
 };
 
+// Retire le nom de la sourate de l'écran de verrouillage et de la notification.
 const clearNowPlaying = (): void => {
   if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
-  navigator.mediaSession.metadata = null;
+  try {
+    navigator.mediaSession.metadata = null;
+    navigator.mediaSession.playbackState = 'none';
+    for (const action of ['play', 'pause', 'seekbackward', 'seekforward'] as MediaSessionAction[]) {
+      navigator.mediaSession.setActionHandler(action, null);
+    }
+  } catch {}
 };
 
 /**
@@ -178,6 +187,7 @@ export const playAudioTrack = async (url: string, startRatio: number = 0, startS
     );
 
     currentSound = sound;
+    lastUrl = url;
     showNowPlaying(url);
 
     if (startRatio > 0 && status.isLoaded && status.durationMillis) {
@@ -246,6 +256,7 @@ export const playAyahOnly = async (
 
     currentSound = sound;
     stopAtSeconds = bounds.endSec;
+    lastUrl = url;
     showNowPlaying(url);
 
     return true;
@@ -309,7 +320,13 @@ const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
     });
 
     if (status.didJustFinish && !status.isLooping) {
+      const finished = currentSound;
       notifyFinishListeners();
+      // Personne n'a enchaîné sur une autre piste : on libère le son, ce qui retire aussi le
+      // nom de la sourate de l'écran de verrouillage.
+      setTimeout(() => {
+        if (currentSound === finished) stopAudioTrack();
+      }, 1500);
     }
   } else if ('error' in status && status.error) {
     console.warn('Erreur statut audio:', status.error);
@@ -328,7 +345,10 @@ const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
  * Alterne entre Lecture et Pause
  */
 export const togglePlayPause = async (): Promise<void> => {
-  if (!currentSound) return;
+  if (!currentSound) {
+    if (lastUrl) await playAudioTrack(lastUrl);
+    return;
+  }
   try {
     const status = await currentSound.getStatusAsync();
     if (status.isLoaded) {

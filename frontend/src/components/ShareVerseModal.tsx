@@ -12,6 +12,7 @@ import { Ayah } from '../types/quran';
 import { useTheme } from '../context/ThemeContext';
 import { playAudioTrack } from '../services/audioService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
+import { shareVerse } from '../services/verseCard';
 
 interface ShareVerseModalProps {
   visible: boolean;
@@ -112,6 +113,15 @@ export const ShareVerseModal: React.FC<ShareVerseModalProps> = ({
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Options de partage du verset :
           </Text>
+
+          {/* Image aux couleurs de l'app (voir verseCard) */}
+          <TouchableOpacity
+            style={[styles.shareBtn, { backgroundColor: colors.accentBg }]}
+            onPress={() => shareVerse(surahNumber, ayah.numberInSurah).then(onClose)}
+          >
+            <Ionicons name="image-outline" size={18} color={colors.accentText} style={{ marginRight: 8 }} />
+            <Text style={[styles.shareBtnTextDark, { color: colors.accentText }]}>Partager en image</Text>
+          </TouchableOpacity>
 
           {/* Option 1: Bilingue */}
           <TouchableOpacity

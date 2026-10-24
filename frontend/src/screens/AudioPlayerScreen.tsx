@@ -70,6 +70,12 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
     await playAudioFromAyah(audioUrl, surah.number, ayah, surah.numberOfAyahs);
   };
 
+  // Sourate déjà chargée : le bouton met en pause / reprend au lieu de la relancer au début.
+  const handleRowPress = (surah: Surah) => {
+    if (currentSurah?.number === surah.number && audioStatus.isLoaded) togglePlayPause();
+    else handlePlaySurah(surah);
+  };
+
   // « Reprendre la lecture » (accueil) : relance la sourate au verset où l'on s'était arrêté.
   const resume = route.params;
   useEffect(() => {
@@ -144,7 +150,7 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
             borderColor: isSelected ? colors.gold : colors.border,
           },
         ]}
-        onPress={() => handlePlaySurah(item)}
+        onPress={() => handleRowPress(item)}
         activeOpacity={0.7}
       >
         <View style={styles.itemLeft}>
@@ -167,7 +173,7 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
 
         <View style={styles.itemRight}>
           <Text style={[styles.arabicName, { color: colors.gold }]}>{item.name}</Text>
-          <TouchableOpacity onPress={() => handlePlaySurah(item)} style={styles.playBtnSmall}>
+          <TouchableOpacity onPress={() => handleRowPress(item)} style={styles.playBtnSmall}>
             <Ionicons
               name={isPlayingThis ? 'pause-circle' : 'play-circle'}
               size={32}

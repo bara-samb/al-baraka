@@ -54,6 +54,13 @@
         -webkit-text-size-adjust: 100%;
         text-size-adjust: 100%;
       }
+      /* Samsung Internet (et d'autres navigateurs Android) n'assombrissent pas un site qui
+         déclare gérer lui-même le mode sombre : cette règle sert de déclaration. */
+      @media (prefers-color-scheme: dark) {
+        html {
+          background-color: #0b3a2b;
+        }
+      }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;

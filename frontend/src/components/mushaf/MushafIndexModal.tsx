@@ -107,9 +107,6 @@ export const MushafIndexModal: React.FC<MushafIndexModalProps> = ({
         <Text style={[styles.surahArabic, { color: p.title }]} numberOfLines={1}>
           {item.nameAr}
         </Text>
-        <View style={[styles.pageBadge, { borderColor: p.goldSoft }]}>
-          <Text style={[styles.pageBadgeText, { color: p.gold }]}>p. {item.page}</Text>
-        </View>
       </TouchableOpacity>
     );
   };
@@ -387,19 +384,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 36,
     maxWidth: '38%',
-  },
-  pageBadge: {
-    minWidth: 44,
-    marginLeft: 10,
-    paddingHorizontal: 4,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  pageBadgeText: {
-    fontSize: 11,
-    fontWeight: 'bold',
   },
   juzCard: {
     borderWidth: 1,

@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -24,9 +25,11 @@ import { SettingsModal } from '../components/SettingsModal';
 import { ContactModal } from '../components/ContactModal';
 import { SadaqahModal } from '../components/SadaqahModal';
 
-// Verset du jour : un verset de longueur moyenne (ni lettres isolées, ni passage trop long
-// pour une carte), le même pour tout le monde pendant une journée.
-const DAILY_CANDIDATES = MUSHAF_VERSES.filter((v) => v.text.length >= 60 && v.text.length <= 200);
+const reciterPhoto = require('../assets/serigne_abdou_bara.jpg');
+
+// Verset du jour : un verset court (ni lettres isolées, ni passage qui allongerait la carte),
+// le même pour tout le monde pendant une journée.
+const DAILY_CANDIDATES = MUSHAF_VERSES.filter((v) => v.text.length >= 50 && v.text.length <= 120);
 const verseOfTheDay = (): MushafVerse => {
   const now = new Date();
   const day = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
@@ -94,6 +97,11 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
 
       {/* Barre de titre */}
       <View style={styles.topBar}>
+        <Image
+          source={reciterPhoto}
+          style={[styles.photo, { borderColor: colors.gold }]}
+          accessibilityLabel="Serigne Aboul Baraka Mbacké"
+        />
         <View style={{ flex: 1 }}>
           <Text style={[styles.title, { color: colors.textPrimary }]}>AL BARAKA</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
@@ -165,14 +173,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
         {/* Verset du jour */}
         <View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           <Text style={[styles.cardLabel, { color: colors.gold }]}>VERSET DU JOUR</Text>
-          <Text
-            style={[
-              styles.dailyArabic,
-              { color: colors.textPrimary, fontSize: arabicFontSize, lineHeight: arabicFontSize * 1.9 },
-            ]}
-          >
-            {daily.text}
-          </Text>
+          <Text style={[styles.dailyArabic, { color: colors.textPrimary }]}>{daily.text}</Text>
           <View style={styles.dailyFooter}>
             <Text style={[styles.dailyRef, { color: colors.textSecondary }]} numberOfLines={1}>
               {surahNameLatin(daily.surah)} · {daily.surah}:{daily.ayah}
@@ -243,6 +244,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  photo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    marginRight: 6,
   },
   title: {
     fontSize: 22,
@@ -353,15 +361,17 @@ const styles = StyleSheet.create({
   },
   dailyArabic: {
     fontFamily: 'KFGQPC_Warsh',
+    fontSize: 20,
+    lineHeight: 34,
     textAlign: 'center',
     writingDirection: 'rtl',
-    marginTop: 10,
+    marginTop: 4,
   },
   dailyFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 10,
+    marginTop: 4,
   },
   dailyRef: {
     flex: 1,

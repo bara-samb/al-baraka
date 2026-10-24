@@ -10,16 +10,18 @@ import {
   Animated,
   Modal,
   Pressable,
-  Share,
   NativeScrollEvent,
   NativeSyntheticEvent,
   useWindowDimensions,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../context/ThemeContext';
 import { getSurahList } from '../services/quranService';
-import { getArabicFontSize, setArabicFontSize, subscribeFontSizeChange } from '../services/settingsService';
+import { DEFAULT_ARABIC_FONT_SIZE, getArabicFontSize, setArabicFontSize, subscribeFontSizeChange } from '../services/settingsService';
+import { setImmersive } from '../services/immersiveMode';
+import { shareVerse } from '../services/verseCard';
 import {
   playAyahOnly,
   playAudioFromAyah,
@@ -76,7 +78,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
 
   const [page, setPage] = useState<number | null>(null);
   const [pageHeight, setPageHeight] = useState(0);
-  const [fontSize, setFontSize] = useState(24);
+  const [fontSize, setFontSize] = useState(DEFAULT_ARABIC_FONT_SIZE);
   const [revelationTypes, setRevelationTypes] = useState<Record<number, 'Meccan' | 'Medinan'>>({});
   const [bookmark, setBookmark] = useState<MushafBookmark | null>(null);
   const [chromeVisible, setChromeVisible] = useState(true);
@@ -154,6 +156,14 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
   useEffect(() => {
     Animated.timing(chromeAnim, { toValue: chromeVisible ? 1 : 0, duration: 200, useNativeDriver: true }).start();
   }, [chromeVisible, chromeAnim]);
+
+  // Barres masquées : la barre d'onglets se cache aussi (lecture plein écran), seulement
+  // tant que le Mushaf est l'onglet affiché.
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    setImmersive(isFocused && !chromeVisible);
+  }, [isFocused, chromeVisible]);
+  useEffect(() => () => setImmersive(false), []);
 
   const showToast = useCallback(
     (text: string) => {
@@ -310,9 +320,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
     showToast('Verset copié');
   };
 
-  const handleShare = (v: MushafVerse) => {
-    Share.share({ message: `${v.text.replace(/۞\s*/g, '')}\n\n${verseReference(v)}\n\nAL BARAKA` }).catch(() => {});
-  };
+  // Image aux couleurs de l'app (web), texte mis en forme ailleurs : voir verseCard.
+  const handleShare = (v: MushafVerse) => shareVerse(v.surah, v.ayah);
 
   const handleVersePress = useCallback((v: MushafVerse) => setSheetVerse(v), []);
   const handleBackgroundPress = useCallback(() => setChromeVisible((visible) => !visible), []);
@@ -365,7 +374,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
     <SafeAreaView style={[styles.container, { backgroundColor: p.screen }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={p.screen} />
 
-      <View style={[styles.pagesArea, { marginBottom: TAB_BAR_SPACE }]} onLayout={(e) => setPageHeight(e.nativeEvent.layout.height)}>
+      <View style={styles.pagesArea} onLayout={(e) => setPageHeight(e.nativeEvent.layout.height)}>
         {page !== null && pageHeight > 0 && (
           <FlatList
             key={listKey}
