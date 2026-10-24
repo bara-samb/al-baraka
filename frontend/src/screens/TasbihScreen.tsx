@@ -68,13 +68,15 @@ export const TasbihScreen: React.FC = () => {
   };
 
   const handleResetCount = () => {
+    if (count === 0) return; // déjà à zéro : rien à confirmer
+    const progress = target > 0 ? `${count} sur ${target}` : `${count}`;
     showAlert(
-      'Réinitialiser le compteur',
-      'Remettre à zéro le compteur de Zikr ?',
+      'Remettre à zéro ?',
+      `Vous en êtes à ${progress} zikr. Le compteur repartira de 0.`,
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: 'Continuer mon zikr', style: 'cancel' },
         {
-          text: 'Réinitialiser',
+          text: 'Remettre à zéro',
           style: 'destructive',
           onPress: () => setCount(0),
         },

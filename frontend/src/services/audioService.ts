@@ -1,5 +1,7 @@
+import { Platform } from 'react-native';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import ayahTimingsData from '../data/ayahTimings.json';
+import { surahNameAr, surahNameLatin } from './warshMushafService';
 
 interface AyahTimingEntry {
   totalDuration: number;
@@ -109,6 +111,37 @@ export const initAudioMode = async (): Promise<void> => {
 };
 
 /**
+ * Web : nom de la sourate en cours sur l'écran de verrouillage, dans la notification du
+ * navigateur et sur les écouteurs Bluetooth (Media Session), avec lecture/pause et ±10 s.
+ * Le numéro de sourate est lu dans le nom du fichier (NNN.mp3).
+ */
+const showNowPlaying = (url: string): void => {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+  const surah = Number(url.match(/(\d{3})\.mp3(?:\?.*)?$/)?.[1]);
+  if (!surah) return;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: `${surah}. ${surahNameLatin(surah)} · ${surahNameAr(surah)}`,
+      artist: 'Serigne Aboul Baraka Mbacké',
+      album: 'AL BARAKA · Riwaya Warsh',
+      artwork: [
+        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      ],
+    });
+    navigator.mediaSession.setActionHandler('play', () => { currentSound?.playAsync().catch(() => {}); });
+    navigator.mediaSession.setActionHandler('pause', () => { currentSound?.pauseAsync().catch(() => {}); });
+    navigator.mediaSession.setActionHandler('seekbackward', () => { seekBy(-10); });
+    navigator.mediaSession.setActionHandler('seekforward', () => { seekBy(10); });
+  } catch {}
+};
+
+const clearNowPlaying = (): void => {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+  navigator.mediaSession.metadata = null;
+};
+
+/**
  * S'abonne aux mises à jour de statut de la lecture audio
  */
 export const subscribeAudioStatus = (callback: (status: SoundStatus) => void) => {
@@ -145,6 +178,7 @@ export const playAudioTrack = async (url: string, startRatio: number = 0, startS
     );
 
     currentSound = sound;
+    showNowPlaying(url);
 
     if (startRatio > 0 && status.isLoaded && status.durationMillis) {
       const clampedRatio = Math.max(0, Math.min(startRatio, 1));
@@ -212,6 +246,7 @@ export const playAyahOnly = async (
 
     currentSound = sound;
     stopAtSeconds = bounds.endSec;
+    showNowPlaying(url);
 
     return true;
   } catch (error: any) {
@@ -365,6 +400,7 @@ export const stopAudioTrack = async (): Promise<void> => {
       await currentSound.unloadAsync();
     } catch {}
     currentSound = null;
+    clearNowPlaying();
     notifyListeners({ isPlaying: false, position: 0, duration: 0, isLoaded: false });
   }
 };
