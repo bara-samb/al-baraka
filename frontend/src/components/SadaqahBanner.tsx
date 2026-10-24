@@ -15,7 +15,7 @@ export const SadaqahBanner: React.FC = () => {
         onPress={() => setModalVisible(true)}
         activeOpacity={0.88}
       >
-        <View style={styles.leftIconContainer}>
+        <View style={[styles.leftIconContainer, { backgroundColor: colors.goldTint }]}>
           <Ionicons name="heart" size={20} color={colors.accentText} />
         </View>
 
@@ -28,8 +28,8 @@ export const SadaqahBanner: React.FC = () => {
         </View>
 
         <View style={[styles.actionBtn, { backgroundColor: colors.gold }]}>
-          <Text style={styles.actionBtnText}>Faire un Don</Text>
-          <Ionicons name="chevron-forward" size={14} color="#114232" style={{ marginLeft: 2 }} />
+          <Text style={[styles.actionBtnText, { color: colors.onGold }]}>Faire un Don</Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.onGold} style={{ marginLeft: 2 }} />
         </View>
       </TouchableOpacity>
 
@@ -58,7 +58,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -83,7 +82,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtnText: {
-    color: '#114232',
     fontSize: 11.5,
     fontWeight: 'bold',
   },

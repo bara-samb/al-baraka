@@ -108,7 +108,7 @@ export const MushafIndexModal: React.FC<MushafIndexModalProps> = ({
           {item.nameAr}
         </Text>
         <View style={[styles.pageBadge, { borderColor: p.goldSoft }]}>
-          <Text style={[styles.pageBadgeText, { color: p.gold }]}>{item.page}</Text>
+          <Text style={[styles.pageBadgeText, { color: p.gold }]}>p. {item.page}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     maxWidth: '38%',
   },
   pageBadge: {
-    minWidth: 34,
+    minWidth: 44,
     marginLeft: 10,
     paddingHorizontal: 4,
     paddingVertical: 3,

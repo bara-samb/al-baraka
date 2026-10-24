@@ -99,12 +99,12 @@ export const ShareVerseModal: React.FC<ShareVerseModalProps> = ({
 
           {/* Bouton d'écoute audio Serigne Aboul Baraka Mbacké */}
           <TouchableOpacity
-            style={[styles.playAudioBtn, { backgroundColor: '#A8E6C1', borderColor: colors.gold }]}
+            style={[styles.playAudioBtn, { backgroundColor: colors.accentBg, borderColor: colors.gold }]}
             onPress={handlePlayRecitation}
             activeOpacity={0.85}
           >
-            <Ionicons name="play-circle" size={22} color="#0F4C2E" style={{ marginRight: 8 }} />
-            <Text style={styles.playAudioText}>
+            <Ionicons name="play-circle" size={22} color={colors.accentText} style={{ marginRight: 8 }} />
+            <Text style={[styles.playAudioText, { color: colors.accentText }]}>
               Écouter la récitation de Serigne Aboul Baraka
             </Text>
           </TouchableOpacity>
@@ -118,8 +118,8 @@ export const ShareVerseModal: React.FC<ShareVerseModalProps> = ({
             style={[styles.shareBtn, { backgroundColor: colors.gold }]}
             onPress={shareBilingual}
           >
-            <Ionicons name="documents-outline" size={18} color="#0F172A" style={{ marginRight: 8 }} />
-            <Text style={styles.shareBtnTextDark}>Partage Bilingue (Arabe + Traduction)</Text>
+            <Ionicons name="documents-outline" size={18} color={colors.onGold} style={{ marginRight: 8 }} />
+            <Text style={[styles.shareBtnTextDark, { color: colors.onGold }]}>Partage Bilingue (Arabe + Traduction)</Text>
           </TouchableOpacity>
 
           {/* Option 2: Arabe uniquement */}
@@ -203,7 +203,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   playAudioText: {
-    color: '#0F4C2E',
     fontWeight: 'bold',
     fontSize: 13,
   },
@@ -222,7 +221,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   shareBtnTextDark: {
-    color: '#0F172A',
     fontWeight: 'bold',
     fontSize: 13,
   },

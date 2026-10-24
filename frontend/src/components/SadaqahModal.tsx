@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 interface SadaqahModalProps {
   visible: boolean;
@@ -17,6 +18,7 @@ interface SadaqahModalProps {
 }
 
 export const SadaqahModal: React.FC<SadaqahModalProps> = ({ visible, onClose }) => {
+  const { colors } = useTheme();
   const handleWaveDonation = async () => {
     const waveUrl = 'https://pay.wave.com/m/M_sn_UGcGdaAUDasK/c/sn/';
     try {
@@ -42,27 +44,27 @@ export const SadaqahModal: React.FC<SadaqahModalProps> = ({ visible, onClose }) 
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+        <View style={[styles.modalCard, { backgroundColor: colors.modalBg, borderColor: colors.gold }]}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             {/* Header avec bouton fermer */}
             <View style={styles.header}>
-              <View style={styles.titleBadge}>
-                <Ionicons name="heart" size={18} color="#D4AF37" style={{ marginRight: 6 }} />
-                <Text style={styles.badgeText}>HADIYA / DON</Text>
+              <View style={[styles.titleBadge, { backgroundColor: colors.goldTint, borderColor: colors.gold }]}>
+                <Ionicons name="heart" size={18} color={colors.gold} style={{ marginRight: 6 }} />
+                <Text style={[styles.badgeText, { color: colors.gold }]}>HADIYA / DON</Text>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color="#0F4C2E" />
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
             {/* Titre principal */}
-            <Text style={styles.mainTitle}>Sadaqah Jariyah (صدقة جارية)</Text>
-            <Text style={styles.arabicSub}>مَا نَقَصَتْ صَدَقَةٌ مِنْ مَالٍ</Text>
+            <Text style={[styles.mainTitle, { color: colors.emerald }]}>Sadaqah Jariyah (صدقة جارية)</Text>
+            <Text style={[styles.arabicSub, { color: colors.gold }]}>مَا نَقَصَتْ صَدَقَةٌ مِنْ مَالٍ</Text>
 
             {/* Explication */}
-            <Text style={styles.description}>
-              L'application <Text style={styles.bold}>AL BARAKA</Text> est 100% gratuite et sans aucune publicité. Vos dons participent directement au soutien et au maintien des serveurs d'écoute fluide des récitations de <Text style={styles.goldText}>Serigne Aboul Baraka Mbacké</Text>.
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              L'application <Text style={[styles.bold, { color: colors.textPrimary }]}>AL BARAKA</Text> est 100% gratuite et sans aucune publicité. Vos dons participent directement au soutien et au maintien des serveurs d'écoute fluide des récitations de <Text style={[styles.goldText, { color: colors.gold }]}>Serigne Aboul Baraka Mbacké</Text>.
             </Text>
 
             {/* Boutons d'action de paiement */}
@@ -95,13 +97,13 @@ export const SadaqahModal: React.FC<SadaqahModalProps> = ({ visible, onClose }) 
             </View>
 
             {/* Note spirituelle de fin */}
-            <Text style={styles.spiritualNote}>
+            <Text style={[styles.spiritualNote, { color: colors.gold }]}>
               "Ce que vous dépensez de bien, Allah le sait parfaitement."
             </Text>
 
             {/* Bouton Fermer secondaire */}
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelText}>Fermer la fenêtre</Text>
+              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Fermer la fenêtre</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -113,7 +115,6 @@ export const SadaqahModal: React.FC<SadaqahModalProps> = ({ visible, onClose }) 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 18,
@@ -121,10 +122,8 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxHeight: Dimensions.get('window').height * 0.88,
-    backgroundColor: '#A8E6C1',
     borderRadius: 24,
     borderWidth: 1.5,
-    borderColor: '#D4AF37',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -143,15 +142,12 @@ const styles = StyleSheet.create({
   titleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#D4AF37',
   },
   badgeText: {
-    color: '#8B6914',
     fontSize: 11,
     fontWeight: 'bold',
     letterSpacing: 1,
@@ -162,30 +158,25 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#0F4C2E',
     marginTop: 14,
     textAlign: 'center',
   },
   arabicSub: {
     fontSize: 18,
-    color: '#8B6914',
     textAlign: 'center',
     marginTop: 4,
     marginBottom: 14,
   },
   description: {
     fontSize: 14,
-    color: '#1F4A38',
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 22,
   },
   bold: {
     fontWeight: 'bold',
-    color: '#0F4C2E',
   },
   goldText: {
-    color: '#8B6914',
     fontWeight: 'bold',
   },
   actionSection: {
@@ -222,7 +213,6 @@ const styles = StyleSheet.create({
   },
   spiritualNote: {
     fontSize: 12.5,
-    color: '#8B6914',
     fontStyle: 'italic',
     textAlign: 'center',
     marginBottom: 16,
@@ -232,7 +222,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   cancelText: {
-    color: '#3D7A5C',
     fontSize: 13,
     textDecorationLine: 'underline',
   },

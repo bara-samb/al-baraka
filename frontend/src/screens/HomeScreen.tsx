@@ -154,7 +154,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
             onPress={() => navigation.navigate('AudioTab')}
             activeOpacity={0.8}
           >
-            <View style={[styles.gridIconBadge, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+            <View style={[styles.gridIconBadge, { backgroundColor: colors.goldTint }]}>
               <Ionicons name="headset" size={22} color={colors.gold} />
             </View>
             <Text style={[styles.gridCardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -174,7 +174,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
             onPress={() => navigation.navigate('MushafTab')}
             activeOpacity={0.8}
           >
-            <View style={[styles.gridIconBadge, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+            <View style={[styles.gridIconBadge, { backgroundColor: colors.goldTint }]}>
               <Ionicons name="book" size={22} color={colors.gold} />
             </View>
             <Text style={[styles.gridCardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -195,7 +195,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
             onPress={() => navigation.navigate('TasbihTab')}
             activeOpacity={0.8}
           >
-            <View style={[styles.gridIconBadge, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+            <View style={[styles.gridIconBadge, { backgroundColor: colors.goldTint }]}>
               <Ionicons name="disc" size={22} color={colors.gold} />
             </View>
             <Text style={[styles.gridCardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -215,7 +215,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
             onPress={() => navigation.navigate('Favorites')}
             activeOpacity={0.8}
           >
-            <View style={[styles.gridIconBadge, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+            <View style={[styles.gridIconBadge, { backgroundColor: colors.goldTint }]}>
               <Ionicons name="heart" size={22} color={colors.gold} />
             </View>
             <Text style={[styles.gridCardTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -235,7 +235,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
             onPress={() => setIsSadaqahOpen(true)}
             activeOpacity={0.8}
           >
-            <View style={[styles.gridIconBadge, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+            <View style={[styles.gridIconBadge, { backgroundColor: colors.goldTint }]}>
               <Ionicons name="heart" size={22} color={colors.gold} />
             </View>
             <Text style={[styles.gridCardTitle, { color: colors.textPrimary }]} numberOfLines={1}>

@@ -76,7 +76,7 @@ export const SurahCard: React.FC<SurahCardProps> = ({ surah, onPress }) => {
           <Ionicons
             name={isFav ? 'heart' : 'heart-outline'}
             size={22}
-            color={isFav ? '#EF4444' : colors.textSecondary}
+            color={isFav ? colors.danger : colors.textSecondary}
           />
         </TouchableOpacity>
         <Text style={[styles.arabicName, { color: colors.gold }]}>{surah.name}</Text>

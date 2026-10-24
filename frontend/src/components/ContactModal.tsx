@@ -42,7 +42,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ visible, onClose }) 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             {/* Header avec bouton fermer */}
             <View style={styles.header}>
-              <View style={styles.titleBadge}>
+              <View style={[styles.titleBadge, { backgroundColor: colors.goldTint }]}>
                 <Ionicons name="chatbubbles" size={18} color={colors.gold} style={{ marginRight: 6 }} />
                 <Text style={[styles.badgeText, { color: colors.gold }]}>CONTACT & SUPPORT</Text>
               </View>
@@ -147,7 +147,6 @@ const styles = StyleSheet.create({
   titleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,

@@ -121,7 +121,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
             <Text
               style={[
                 styles.tabBtnText,
-                { color: activeTab === 'surahs' ? '#0F172A' : colors.textSecondary },
+                { color: activeTab === 'surahs' ? colors.onGold : colors.textSecondary },
               ]}
             >
               Sourates ({favSurahs.length})
@@ -138,7 +138,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
             <Text
               style={[
                 styles.tabBtnText,
-                { color: activeTab === 'ayahs' ? '#0F172A' : colors.textSecondary },
+                { color: activeTab === 'ayahs' ? colors.onGold : colors.textSecondary },
               ]}
             >
               Versets ({favAyahs.length})
@@ -161,7 +161,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
                 style={[styles.removeBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
                 onPress={() => handleRemoveSurah(item)}
               >
-                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                <Ionicons name="trash-outline" size={18} color={colors.danger} />
               </TouchableOpacity>
             </View>
           )}
@@ -200,7 +200,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
                   {item.englishName} - Verset {item.ayah.numberInSurah}
                 </Text>
                 <TouchableOpacity onPress={() => handleRemoveAyah(item)}>
-                  <Ionicons name="close" size={20} color="#EF4444" />
+                  <Ionicons name="close" size={20} color={colors.danger} />
                 </TouchableOpacity>
               </View>
 

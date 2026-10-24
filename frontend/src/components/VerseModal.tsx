@@ -126,8 +126,8 @@ export const VerseModal: React.FC<VerseModalProps> = ({
               onPress={handlePlaySingleVerse}
               activeOpacity={0.8}
             >
-              <Ionicons name="volume-medium-outline" size={20} color="#0F172A" style={{ marginRight: 8 }} />
-              <Text style={styles.actionButtonTextDark}>
+              <Ionicons name="volume-medium-outline" size={20} color={colors.onGold} style={{ marginRight: 8 }} />
+              <Text style={[styles.actionButtonTextDark, { color: colors.onGold }]}>
                 Écouter la récitation (Serigne Aboul Baraka)
               </Text>
             </TouchableOpacity>
@@ -152,8 +152,8 @@ export const VerseModal: React.FC<VerseModalProps> = ({
               style={[
                 styles.actionButton,
                 {
-                  backgroundColor: isFav ? '#EF4444' : colors.bgPrimary,
-                  borderColor: isFav ? '#EF4444' : colors.border,
+                  backgroundColor: isFav ? colors.danger : colors.bgPrimary,
+                  borderColor: isFav ? colors.danger : colors.border,
                   borderWidth: 1,
                 },
               ]}
@@ -276,7 +276,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   actionButtonTextDark: {
-    color: '#0F172A',
     fontWeight: 'bold',
     fontSize: 14,
   },

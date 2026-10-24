@@ -42,20 +42,21 @@ export const mushafLight: MushafPalette = {
   chromeBorder: '#E3D6B4',
 };
 
+// Mêmes fonds que le thème sombre de l'app (ThemeContext), pour un passage sans rupture.
 export const mushafDark: MushafPalette = {
-  screen: '#070E0B',
-  page: '#101915',
-  ink: '#EEE6D1',
+  screen: '#0E1110',
+  page: '#151A18',
+  ink: '#EFE8D6',
   title: '#E0BE6A',
-  muted: '#9C927A',
-  gold: '#D6B158',
-  goldSoft: '#A88C4A',
+  muted: '#A39D8C',
+  gold: '#D8B566',
+  goldSoft: '#9C824A',
   green: '#1D6B52',
-  greenDeep: '#0D2E23',
+  greenDeep: '#173A2E',
   onGreen: '#F3DE9E',
   ribbon: '#C2473C',
-  selected: 'rgba(214, 177, 88, 0.22)',
-  playing: 'rgba(76, 190, 148, 0.28)',
-  chrome: '#0F1814',
-  chromeBorder: '#24342C',
+  selected: 'rgba(216, 181, 102, 0.22)',
+  playing: 'rgba(91, 191, 151, 0.26)',
+  chrome: '#161B19',
+  chromeBorder: '#2A322E',
 };

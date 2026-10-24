@@ -14,10 +14,11 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 // Composant d'écran pour l'onglet Sadaqah (Ouvre directement la modal)
 const DummySadaqahScreen: React.FC = () => {
+  const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState<boolean>(true);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#A8E6C1' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       <SadaqahModal visible={modalVisible} onClose={() => setModalVisible(false)} />
     </View>
   );

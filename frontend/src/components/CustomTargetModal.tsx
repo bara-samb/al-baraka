@@ -78,7 +78,7 @@ export const CustomTargetModal: React.FC<CustomTargetModalProps> = ({
               {
                 backgroundColor: colors.bgPrimary,
                 color: colors.textPrimary,
-                borderColor: error ? '#EF4444' : colors.border,
+                borderColor: error ? colors.danger : colors.border,
               },
             ]}
             keyboardType="number-pad"
@@ -94,7 +94,7 @@ export const CustomTargetModal: React.FC<CustomTargetModalProps> = ({
             placeholderTextColor={colors.textSecondary}
             autoFocus
           />
-          {error && <Text style={styles.error}>{error}</Text>}
+          {error && <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>}
 
           <View style={styles.buttonRow}>
             <TouchableOpacity style={[styles.btn, styles.cancelBtn, { borderColor: colors.border }]} onPress={onClose}>
@@ -102,7 +102,7 @@ export const CustomTargetModal: React.FC<CustomTargetModalProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.btn, styles.saveBtn, { backgroundColor: colors.gold }]} onPress={handleSave}>
-              <Text style={styles.saveBtnText}>Valider l'objectif</Text>
+              <Text style={[styles.saveBtnText, { color: colors.onGold }]}>Valider l'objectif</Text>
             </TouchableOpacity>
           </View>
 
@@ -158,7 +158,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   error: {
-    color: '#EF4444',
     fontSize: 12,
     textAlign: 'center',
   },
@@ -182,7 +181,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   saveBtnText: {
-    color: '#0F172A',
     fontWeight: 'bold',
     fontSize: 14,
   },

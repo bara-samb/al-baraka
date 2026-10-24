@@ -28,7 +28,7 @@ import { VerseModal } from '../components/VerseModal';
 import { SurahScreenProps } from '../navigation/types';
 
 export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { surahNumber, surahName, englishName, initialVerseNumber } = route.params;
 
   const [surahDetail, setSurahDetail] = useState<SurahDetail | null>(null);
@@ -208,13 +208,13 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
   };
 
   const renderSurahBannerHeader = () => (
-    <View style={styles.surahBannerFrame}>
-      <Text style={styles.surahBannerArabic}>{surahName}</Text>
-      <Text style={styles.surahBannerMeta}>
+    <View style={[styles.surahBannerFrame, { backgroundColor: colors.accentBg, borderColor: colors.gold }]}>
+      <Text style={[styles.surahBannerArabic, { color: colors.accentText }]}>{surahName}</Text>
+      <Text style={[styles.surahBannerMeta, { color: colors.accentSub }]}>
         {englishName} • {surahDetail?.numberOfAyahs || 0} Versets • Riwaya Warsh (ورش)
       </Text>
       {shouldShowBasmalaHeader(surahNumber) && (
-        <Text style={styles.basmalaHeaderText}>{WARSH_BASMALA}</Text>
+        <Text style={[styles.basmalaHeaderText, { color: colors.accentText }]}>{WARSH_BASMALA}</Text>
       )}
     </View>
   );
@@ -224,8 +224,8 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
       style={[
         styles.ayahContainer,
         {
-          backgroundColor: isDark ? colors.bgCard : '#FDFBF7', // Texture papier crème léger
-          borderColor: isDark ? colors.border : '#E2D8C3',
+          backgroundColor: colors.bgCard,
+          borderColor: colors.border,
         },
       ]}
       onPress={() => handleAyahPress(item)}
@@ -233,7 +233,7 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
     >
       <View style={styles.ayahHeaderRow}>
         <View style={[styles.ayahMedallion, { backgroundColor: colors.gold }]}>
-          <Text style={styles.ayahMedallionText}>﴿{toArabicDigits(item.numberInSurah)}﴾</Text>
+          <Text style={[styles.ayahMedallionText, { color: colors.onGold }]}>﴿{toArabicDigits(item.numberInSurah)}﴾</Text>
         </View>
         <Text style={[styles.verseLabelText, { color: colors.textSecondary }]}>Verset {item.numberInSurah}</Text>
       </View>
@@ -248,7 +248,7 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
       </Text>
 
       {translationLang !== 'none' && item.translation ? (
-        <Text style={[styles.translationText, { color: isDark ? colors.textSecondary : '#555555' }]}>
+        <Text style={[styles.translationText, { color: colors.textSecondary }]}>
           {item.translation}
         </Text>
       ) : null}
@@ -256,8 +256,8 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? colors.bgPrimary : '#FDFBF7' }]}>
-      <View style={[styles.topBar, { backgroundColor: isDark ? colors.bgSecondary : '#F4EFE6', borderBottomColor: colors.border }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <View style={[styles.topBar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
         <View style={styles.topRow}>
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: colors.bgPrimary, borderColor: colors.border }]}
@@ -280,7 +280,7 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
             <Ionicons
               name={isFav ? 'heart' : 'heart-outline'}
               size={22}
-              color={isFav ? '#EF4444' : colors.textSecondary}
+              color={isFav ? colors.danger : colors.textSecondary}
             />
           </TouchableOpacity>
         </View>
@@ -328,7 +328,7 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
             <Text
               style={[
                 styles.toggleButtonText,
-                { color: translationLang !== 'none' ? '#0F172A' : colors.textSecondary },
+                { color: translationLang !== 'none' ? colors.onGold : colors.textSecondary },
               ]}
             >
               {translationLang === 'fr' ? 'FR 🇫🇷' : translationLang === 'en' ? 'EN 🇬🇧' : 'OFF 🚫'}
@@ -455,20 +455,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 16,
     padding: 16,
-    backgroundColor: '#A8E6C1',
     borderWidth: 1.5,
-    borderColor: '#D4AF37',
     alignItems: 'center',
   },
   surahBannerArabic: {
-    color: '#0F4C2E',
     fontSize: 32,
     fontFamily: 'KFGQPC_Warsh',
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   basmalaHeaderText: {
-    color: '#0F4C2E',
     fontSize: 22,
     fontFamily: 'KFGQPC_Warsh',
     textAlign: 'center',
@@ -476,7 +472,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   surahBannerMeta: {
-    color: '#3D7A5C',
     fontSize: 12,
     marginTop: 4,
   },
@@ -512,7 +507,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   ayahMedallionText: {
-    color: '#0F172A',
     fontWeight: 'bold',
     fontSize: 13,
   },

@@ -140,7 +140,7 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
         style={[
           styles.surahItem,
           {
-            backgroundColor: isSelected ? 'rgba(212, 175, 55, 0.12)' : colors.bgCard,
+            backgroundColor: isSelected ? colors.goldTint : colors.bgCard,
             borderColor: isSelected ? colors.gold : colors.border,
           },
         ]}
@@ -150,9 +150,9 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
         <View style={styles.itemLeft}>
           <View style={[styles.numberBadge, { backgroundColor: isSelected ? colors.gold : colors.bgSecondary }]}>
             {isPlayingThis ? (
-              <Ionicons name="volume-high" size={16} color={isSelected ? '#0F172A' : colors.gold} />
+              <Ionicons name="volume-high" size={16} color={isSelected ? colors.onGold : colors.gold} />
             ) : (
-              <Text style={[styles.numberText, { color: isSelected ? '#0F172A' : colors.textPrimary }]}>
+              <Text style={[styles.numberText, { color: isSelected ? colors.onGold : colors.textPrimary }]}>
                 {item.number}
               </Text>
             )}

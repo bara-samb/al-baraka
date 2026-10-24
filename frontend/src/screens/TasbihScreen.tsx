@@ -146,7 +146,7 @@ export const TasbihScreen: React.FC = () => {
                 <Text
                   style={[
                     styles.targetBtnText,
-                    { color: target === t ? '#0F172A' : colors.textPrimary },
+                    { color: target === t ? colors.onGold : colors.textPrimary },
                   ]}
                 >
                   {t}
@@ -168,14 +168,14 @@ export const TasbihScreen: React.FC = () => {
               <Ionicons
                 name={target === 0 ? 'infinite' : 'create-outline'}
                 size={14}
-                color={isFreeTarget ? '#0F172A' : colors.gold}
+                color={isFreeTarget ? colors.onGold : colors.gold}
               />
               <Text
                 style={[
                   styles.targetBtnText,
                   {
                     marginLeft: 4,
-                    color: isFreeTarget ? '#0F172A' : colors.textSecondary,
+                    color: isFreeTarget ? colors.onGold : colors.textSecondary,
                   },
                 ]}
               >

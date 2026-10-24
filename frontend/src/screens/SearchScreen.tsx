@@ -56,7 +56,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ navigation }) => {
     >
       <View style={styles.cardHeader}>
         <View style={[styles.surahBadge, { backgroundColor: colors.gold }]}>
-          <Text style={styles.surahBadgeText}>
+          <Text style={[styles.surahBadgeText, { color: colors.onGold }]}>
             Sourate {item.surahNumber} • Verset {item.numberInSurah}
           </Text>
         </View>
@@ -112,7 +112,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ navigation }) => {
             style={[styles.searchActionBtn, { backgroundColor: colors.gold }]}
             onPress={handleSearch}
           >
-            <Ionicons name="arrow-forward" size={18} color="#0F172A" />
+            <Ionicons name="arrow-forward" size={18} color={colors.onGold} />
           </TouchableOpacity>
         </View>
       </View>
@@ -128,7 +128,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ navigation }) => {
         <View style={{ flex: 1 }}>
           {/* Bandeau Statistiques */}
           {stats && stats.query ? (
-            <View style={[styles.statsBanner, { backgroundColor: 'rgba(212, 175, 55, 0.12)', borderColor: colors.gold }]}>
+            <View style={[styles.statsBanner, { backgroundColor: colors.goldTint, borderColor: colors.gold }]}>
               <Ionicons name="analytics-outline" size={20} color={colors.gold} style={{ marginRight: 8 }} />
               <Text style={[styles.statsText, { color: colors.textPrimary }]}>
                 Le mot <Text style={{ fontWeight: 'bold', color: colors.gold }}>"{stats.query}"</Text> apparaît{' '}
@@ -272,7 +272,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   surahBadgeText: {
-    color: '#0F172A',
     fontWeight: 'bold',
     fontSize: 11,
   },

@@ -122,7 +122,7 @@ export const FullAudioPlayer: React.FC<FullAudioPlayerProps> = ({
             <Text style={[styles.headerSub, { color: colors.gold }]}>SERIGNE ABOUL BARAKA MBACKÉ</Text>
             <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Sourate N°{surahNumber}</Text>
           </View>
-          <TouchableOpacity style={styles.menuBtn} onPress={onToggleSpeedPress}>
+          <TouchableOpacity style={[styles.menuBtn, { backgroundColor: colors.goldTint }]} onPress={onToggleSpeedPress}>
             <Text style={[styles.speedTextHeader, { color: colors.gold }]}>{SPEED_OPTIONS[currentSpeedIndex]}x</Text>
           </TouchableOpacity>
         </View>
@@ -174,7 +174,7 @@ export const FullAudioPlayer: React.FC<FullAudioPlayerProps> = ({
             />
             {repeatMode === 'one' && (
               <View style={[styles.modeBadge, { backgroundColor: colors.gold }]}>
-                <Text style={styles.modeBadgeText}>1</Text>
+                <Text style={[styles.modeBadgeText, { color: colors.onGold }]}>1</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -199,7 +199,7 @@ export const FullAudioPlayer: React.FC<FullAudioPlayerProps> = ({
             <Ionicons
               name={status.isPlaying ? 'pause' : 'play'}
               size={36}
-              color="#0F172A"
+              color={colors.onGold}
               style={{ marginLeft: status.isPlaying ? 0 : 3 }}
             />
           </TouchableOpacity>
@@ -274,7 +274,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
   },
   speedTextHeader: {
     fontSize: 12,
@@ -309,12 +308,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backgroundColor: 'rgba(14, 17, 16, 0.72)',
     paddingVertical: 8,
     alignItems: 'center',
   },
   artworkArabicText: {
-    color: '#D4AF37',
+    color: '#E9CD87',
     fontSize: 22,
     fontWeight: 'bold',
   },
@@ -386,7 +385,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modeBadgeText: {
-    color: '#0F172A',
     fontSize: 8,
     fontWeight: 'bold',
   },

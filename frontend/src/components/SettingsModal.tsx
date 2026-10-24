@@ -85,7 +85,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </View>
 
             <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.gold }]} onPress={onClose}>
-              <Text style={styles.saveBtnText}>Valider et Appliquer</Text>
+              <Text style={[styles.saveBtnText, { color: colors.onGold }]}>Valider et Appliquer</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -188,7 +188,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveBtnText: {
-    color: '#0F172A',
     fontWeight: 'bold',
     fontSize: 15,
   },

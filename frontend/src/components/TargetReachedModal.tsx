@@ -31,7 +31,7 @@ export const TargetReachedModal: React.FC<TargetReachedModalProps> = ({
           style={[styles.modalBox, { backgroundColor: colors.modalBg, borderColor: colors.gold }]}
         >
           <View style={[styles.iconContainer, { backgroundColor: colors.gold }]}>
-            <Ionicons name="checkmark-circle" size={54} color="#0F172A" />
+            <Ionicons name="checkmark-circle" size={54} color={colors.onGold} />
           </View>
 
           <Text style={[styles.title, { color: colors.gold }]}>Objectif Atteint !</Text>
@@ -48,8 +48,8 @@ export const TargetReachedModal: React.FC<TargetReachedModalProps> = ({
               style={[styles.btn, { backgroundColor: colors.gold }]}
               onPress={onReset}
             >
-              <Ionicons name="refresh-outline" size={20} color="#0F172A" style={{ marginRight: 6 }} />
-              <Text style={styles.btnText}>Recommencer un tour</Text>
+              <Ionicons name="refresh-outline" size={20} color={colors.onGold} style={{ marginRight: 6 }} />
+              <Text style={[styles.btnText, { color: colors.onGold }]}>Recommencer un tour</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -125,7 +125,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   btnText: {
-    color: '#0F172A',
     fontWeight: 'bold',
     fontSize: 15,
   },

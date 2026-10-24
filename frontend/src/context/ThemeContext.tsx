@@ -24,51 +24,69 @@ export interface ThemeColors {
   tabActive: string;
   tabActivePill: string;
   tabInactive: string;
+  /** Texte et icônes posés sur un fond or (boutons, pastilles actives). */
+  onGold: string;
+  /** Fond teinté or (pastilles d'icônes, sélection). */
+  goldTint: string;
+  /** Suppression, favori actif, erreur. */
+  danger: string;
+  /** Voile derrière les fenêtres. */
+  overlay: string;
 }
 
-// Mode sombre : nuit verte et or doux, comme le Mushaf en mode sombre.
+// Mode sombre : nuit chaude presque noire, cartes nettement détachées du fond, vert et or
+// réservés aux accents (le vert sur toutes les surfaces rendait l'ensemble terne).
 export const darkColors: ThemeColors = {
-  bgPrimary: '#08130F',
-  bgSecondary: '#0F201A',
-  bgCard: '#11241D',
-  textPrimary: '#F2EBD9',
-  textSecondary: '#9FB2A7',
-  gold: '#D6B158',
-  goldLight: '#E8CC80',
-  emerald: '#3FBF8F',
-  border: '#21382E',
-  modalBg: '#0F201A',
-  cardShadow: 'rgba(0, 0, 0, 0.5)',
-  accentBg: '#0F3327',
+  bgPrimary: '#0E1110',
+  bgSecondary: '#161B19',
+  bgCard: '#1A201D',
+  textPrimary: '#EFE8D6',
+  textSecondary: '#A39D8C',
+  gold: '#D8B566',
+  goldLight: '#E9CD87',
+  emerald: '#5BBF97',
+  border: '#2A322E',
+  modalBg: '#161B19',
+  cardShadow: 'rgba(0, 0, 0, 0.6)',
+  accentBg: '#173A2E',
   accentText: '#F1DFA8',
-  accentSub: '#A9C7B6',
-  tabBarBg: '#0F201A',
-  tabBarBorder: '#2A4337',
-  tabActive: '#E8CC80',
-  tabActivePill: 'rgba(214, 177, 88, 0.16)',
-  tabInactive: '#7F9488',
+  accentSub: '#B9CBBE',
+  tabBarBg: '#161B19',
+  tabBarBorder: '#2A322E',
+  tabActive: '#E9CD87',
+  tabActivePill: 'rgba(216, 181, 102, 0.14)',
+  tabInactive: '#7F877F',
+  onGold: '#14110A',
+  goldTint: 'rgba(216, 181, 102, 0.14)',
+  danger: '#E06A5E',
+  overlay: 'rgba(0, 0, 0, 0.7)',
 };
 
+// Mode clair : celui du Mushaf (papier ivoire, encre, vert profond et or).
 export const lightColors: ThemeColors = {
-  bgPrimary: '#F1F5F9',
-  bgSecondary: '#FFFFFF',
-  bgCard: '#FFFFFF',
-  textPrimary: '#0F172A',
-  textSecondary: '#64748B',
-  gold: '#D97706',
-  goldLight: '#F59E0B',
-  emerald: '#059669',
-  border: '#E2E8F0',
-  modalBg: '#FFFFFF',
-  cardShadow: 'rgba(0, 0, 0, 0.08)',
-  accentBg: '#A8E6C1',
-  accentText: '#0F4C2E',
-  accentSub: '#3D7A5C',
-  tabBarBg: '#FFFFFF',
-  tabBarBorder: '#E2E8F0',
-  tabActive: '#114232',
-  tabActivePill: '#E8F5E9',
-  tabInactive: '#64748B',
+  bgPrimary: '#F3EEDF',
+  bgSecondary: '#FFFDF6',
+  bgCard: '#FBF7EA',
+  textPrimary: '#1F1A12',
+  textSecondary: '#7C705A',
+  gold: '#B0832C',
+  goldLight: '#C99A3E',
+  emerald: '#145C45',
+  border: '#E3D6B4',
+  modalBg: '#FFFDF6',
+  cardShadow: 'rgba(80, 60, 20, 0.10)',
+  accentBg: '#145C45',
+  accentText: '#F6E7B8',
+  accentSub: '#CFE0D6',
+  tabBarBg: '#FFFDF6',
+  tabBarBorder: '#E3D6B4',
+  tabActive: '#145C45',
+  tabActivePill: 'rgba(20, 92, 69, 0.12)',
+  tabInactive: '#8A7E66',
+  onGold: '#1F1A12',
+  goldTint: 'rgba(176, 131, 44, 0.14)',
+  danger: '#B4382E',
+  overlay: 'rgba(31, 26, 18, 0.55)',
 };
 
 interface ThemeContextType {

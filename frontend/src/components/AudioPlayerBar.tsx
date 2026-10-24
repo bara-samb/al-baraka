@@ -99,7 +99,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
             <Ionicons
               name={status.isPlaying ? 'pause' : 'play'}
               size={20}
-              color="#0F172A"
+              color={colors.onGold}
               style={status.isPlaying ? {} : { marginLeft: 2 }}
             />
           </TouchableOpacity>
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 4,
-    shadowColor: '#F59E0B',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
