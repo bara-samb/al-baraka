@@ -1,16 +1,27 @@
-Police KFGQPC WARSH Uthmanic Script, version 0.10
-Source : King Fahd Glorious Quran Printing Complex (https://qurancomplex.gov.sa/en/techquran/dev/),
-via https://github.com/thetruetruth/quran-data-kfgqpc (warsh/font/warsh.10.ttf).
+Police KFGQPC Warsh Uthmanic Script, version 2.1 (2022)
+Source : King Fahd Glorious Quran Printing Complex,
+https://fonts.qurancomplex.gov.sa/wp-content/uploads/2022/11/UthmanicWarsh_V21.zip (UthmanicWarsh V21.ttf).
 Fichier inclus tel quel, sans modification, conformément à la licence ci-dessous.
+(La version 0.10 plaçait mal les voyelles sur iPhone et Mac : Safari ne les positionnait pas.)
 
-ELECTRONIC END-USER LICENSE AGREEMENT
-
-By installing this Font You accept all the terms and conditions of this Agreement.
-
-Copyright (c) 2008 by King Fahd Glorious Quran Printing Complex (KFGQPC), Al-?Madinah Munawarrah, Kingdom of Saudi Arabia. All Rights Reserved. The Font is owned by KFGQPC and its structure, organization and code are the valuable asset of KFGQPC. This Agreement does not grant you any intellectual property rights in the Font.
-
-Permission is hereby granted, Free of Cost, to any person obtaining a copy of this Font accompanying this license, the rights to Use, Copy, Distribute, subject to the following conditions:
-
-1.    The Font Software cannot be Sold, Modified, Altered, Translated, Reverse Engineered, Decompiled, Disassembled, Reproduced or Attempted to discover the Source Code of this Font in no means.
-
+ELECTRONIC END-USER LICENSE AGREEMENT
+
+
+
+By installing this Font You accept all the terms and conditions of this Agreement.
+
+
+
+Copyright (c) 2008 by King Fahd Glorious Quran Printing Complex (KFGQPC), Al-?Madinah Munawarrah, Kingdom of Saudi Arabia. All Rights Reserved. The Font is owned by KFGQPC and its structure, organization and code are the valuable asset of KFGQPC. This Agreement does not grant you any intellectual property rights in the Font.
+
+
+
+Permission is hereby granted, Free of Cost, to any person obtaining a copy of this Font accompanying this license, the rights to Use, Copy, Distribute, subject to the following conditions:
+
+
+
+1.    The Font Software cannot be Sold, Modified, Altered, Translated, Reverse Engineered, Decompiled, Disassembled, Reproduced or Attempted to discover the Source Code of this Font in no means.
+
+
+
 2.    The Font Software is provided "AS IS", and KFGQPC makes no warranties as to its use or performance, fitness for a particular purpose. KFGQPC does not and cannot warrant the performance or results you may obtain by using the Font. In no event shall KFGQPC be liable for any Claims, Damages or other Liability, including any Damages, arising from, out of the use or inability to use the Font or from other dealings in the Font.

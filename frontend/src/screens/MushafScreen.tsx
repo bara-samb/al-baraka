@@ -98,6 +98,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
   const [revelationTypes, setRevelationTypes] = useState<Record<number, 'Meccan' | 'Medinan'>>({});
   const [bookmark, setBookmark] = useState<MushafBookmark | null>(null);
   const [chromeVisible, setChromeVisible] = useState(true);
+  // Hauteur de l'en-tête : la bulle de récitation se place juste en dessous.
+  const [topBarHeight, setTopBarHeight] = useState(0);
   const [indexVisible, setIndexVisible] = useState(false);
   const [indexTab, setIndexTab] = useState<MushafIndexTab>('surahs');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -367,8 +369,6 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
   const firstVerse = pageVerses[0];
   const highlighted = sheetVerse ?? foundVerse;
   const selectedKey = highlighted ? verseKey(highlighted) : null;
-  const recitedKey = playbackSurah !== null && recitedAyah !== null ? `${playbackSurah}:${recitedAyah}` : null;
-  const recitedPage = playbackSurah !== null && recitedAyah !== null ? getMushafVerse(playbackSurah, recitedAyah)?.page : undefined;
   const selectedPage = highlighted?.page;
 
   const renderPage = useCallback(
@@ -380,14 +380,13 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
         palette={p}
         fontSize={fontSize}
         selectedKey={item === selectedPage ? selectedKey : null}
-        recitedKey={item === recitedPage ? recitedKey : null}
         bookmarked={bookmark?.page === item}
         revelationTypes={revelationTypes}
         onVersePress={handleVersePress}
         onBackgroundPress={handleBackgroundPress}
       />
     ),
-    [width, pageHeight, p, fontSize, selectedPage, selectedKey, recitedPage, recitedKey, bookmark, revelationTypes, handleVersePress, handleBackgroundPress]
+    [width, pageHeight, p, fontSize, selectedPage, selectedKey, bookmark, revelationTypes, handleVersePress, handleBackgroundPress]
   );
 
   const pageSurahs = useMemo(() => [...new Set(pageVerses.map((v) => v.surah))], [pageVerses]);
@@ -427,6 +426,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
       {firstVerse && (
         <Animated.View
           pointerEvents={chromeVisible ? 'auto' : 'none'}
+          onLayout={(e) => setTopBarHeight(e.nativeEvent.layout.height)}
           style={[
             styles.topBar,
             { backgroundColor: p.chrome, borderColor: p.goldSoft, opacity: chromeAnim, transform: [{ translateY: chromeTranslateTop }] },
@@ -444,7 +444,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
               style={[styles.topPhoto, { borderColor: p.gold }]}
               accessibilityLabel="Serigne Aboul Baraka Mbacké"
             />
-            <View style={{ flexShrink: 1 }}>
+            <View style={styles.topLeftText}>
               <Text style={[styles.topSideText, { color: p.title }]} numberOfLines={1}>
                 {juzNameAr(firstVerse.juz)}
               </Text>
@@ -523,9 +523,14 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
       </Animated.View>
 
       {reciting && (
-        <View style={[styles.nowPlaying, { backgroundColor: p.chrome, borderColor: p.goldSoft }]}>
+        <View
+          style={[
+            styles.nowPlaying,
+            { backgroundColor: p.chrome, borderColor: p.goldSoft, top: chromeVisible && topBarHeight ? topBarHeight + 6 : 8 },
+          ]}
+        >
           <Ionicons name={isPlaying ? 'volume-medium' : 'volume-mute'} size={13} color={p.title} />
-          <Text style={[styles.nowPlayingText, { color: p.ink }]}>
+          <Text style={[styles.nowPlayingText, { color: p.ink }]} numberOfLines={1}>
             {surahNameLatin(playbackSurah!)} · verset {recitedAyah}
           </Text>
           <TouchableOpacity onPress={() => goToPage(pageOfVerse(playbackSurah!, recitedAyah!), true)} hitSlop={8}>
@@ -643,13 +648,21 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
     borderBottomWidth: 1,
   },
+  // minWidth 0 + overflow : sur Safari, un texte trop long (plusieurs sourates sur la page,
+  // nom du hizb) déborde sinon sur la colonne voisine au lieu d'être coupé.
   topSide: {
     width: 116,
+    minWidth: 0,
+    overflow: 'hidden',
   },
   topLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  topLeftText: {
+    flex: 1,
+    minWidth: 0,
   },
   topPhoto: {
     width: 34,
@@ -668,7 +681,9 @@ const styles = StyleSheet.create({
   },
   topCenter: {
     flex: 1,
-    alignItems: 'center',
+    minWidth: 0,
+    overflow: 'hidden',
+    alignItems: 'stretch',
     paddingHorizontal: 6,
   },
   topTitle: {
@@ -678,13 +693,17 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     // La police Warsh déborde légèrement de sa boîte : évite de rogner la première lettre.
     paddingHorizontal: 6,
+    textAlign: 'center',
   },
   topSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: -4,
   },
   topSub: {
+    flexShrink: 1,
+    minWidth: 0,
     fontSize: 10,
     letterSpacing: 0.5,
   },
@@ -753,6 +772,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     alignSelf: 'center',
+    maxWidth: '86%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -762,6 +782,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   nowPlayingText: {
+    flexShrink: 1,
     fontSize: 11,
     fontWeight: '600',
   },

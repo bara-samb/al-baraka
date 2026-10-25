@@ -304,7 +304,8 @@ On y voit :
 
 - **Récitation** : Serigne Aboul Baraka Mbacké.
 - **Texte et police du Mushaf Warsh** : King Fahd Glorious Quran Printing Complex (KFGQPC),
-  via [quran-data-kfgqpc](https://github.com/thetruetruth/quran-data-kfgqpc). La police est
+  texte via [quran-data-kfgqpc](https://github.com/thetruetruth/quran-data-kfgqpc), police
+  version 2.1 depuis [fonts.qurancomplex.gov.sa](https://fonts.qurancomplex.gov.sa/). La police est
   incluse sans modification, selon sa licence (`frontend/assets/fonts/KFGQPC_Warsh-LICENSE.txt`) :
   elle ne peut être ni vendue ni modifiée.
 - **Traduction française** : Muhammad Hamidullah, via [api.alquran.cloud](https://alquran.cloud/api).
