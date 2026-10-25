@@ -19,6 +19,7 @@ export interface MushafPalette {
   onGreen: string;
   ribbon: string;
   selected: string;
+  playing: string;
   chrome: string;
   chromeBorder: string;
 }
@@ -36,6 +37,7 @@ export const mushafLight: MushafPalette = {
   onGreen: '#F6E7B8',
   ribbon: '#A9342B',
   selected: 'rgba(176, 131, 44, 0.20)',
+  playing: 'rgba(20, 92, 69, 0.22)',
   chrome: '#FFFDF6',
   chromeBorder: '#E3D6B4',
 };
@@ -54,6 +56,7 @@ export const mushafDark: MushafPalette = {
   onGreen: '#F3DE9E',
   ribbon: '#C2473C',
   selected: 'rgba(216, 181, 102, 0.22)',
+  playing: 'rgba(91, 191, 151, 0.26)',
   chrome: '#161B19',
   chromeBorder: '#2A322E',
 };

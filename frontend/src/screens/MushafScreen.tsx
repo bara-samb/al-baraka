@@ -369,6 +369,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
   const firstVerse = pageVerses[0];
   const highlighted = sheetVerse ?? foundVerse;
   const selectedKey = highlighted ? verseKey(highlighted) : null;
+  const recitedKey = playbackSurah !== null && recitedAyah !== null ? `${playbackSurah}:${recitedAyah}` : null;
+  const recitedPage = playbackSurah !== null && recitedAyah !== null ? getMushafVerse(playbackSurah, recitedAyah)?.page : undefined;
   const selectedPage = highlighted?.page;
 
   const renderPage = useCallback(
@@ -380,13 +382,14 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
         palette={p}
         fontSize={fontSize}
         selectedKey={item === selectedPage ? selectedKey : null}
+        recitedKey={item === recitedPage ? recitedKey : null}
         bookmarked={bookmark?.page === item}
         revelationTypes={revelationTypes}
         onVersePress={handleVersePress}
         onBackgroundPress={handleBackgroundPress}
       />
     ),
-    [width, pageHeight, p, fontSize, selectedPage, selectedKey, bookmark, revelationTypes, handleVersePress, handleBackgroundPress]
+    [width, pageHeight, p, fontSize, selectedPage, selectedKey, recitedPage, recitedKey, bookmark, revelationTypes, handleVersePress, handleBackgroundPress]
   );
 
   const pageSurahs = useMemo(() => [...new Set(pageVerses.map((v) => v.surah))], [pageVerses]);

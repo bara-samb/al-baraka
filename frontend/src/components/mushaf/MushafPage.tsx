@@ -19,8 +19,9 @@ interface MushafPageProps {
   height: number;
   palette: MushafPalette;
   fontSize: number;
-  /** "sourate:verset" du verset sélectionné (surligné), s'il est sur cette page. */
+  /** "sourate:verset" du verset surligné (sélectionné ou en cours de récitation), s'il est sur cette page. */
   selectedKey: string | null;
+  recitedKey: string | null;
   bookmarked: boolean;
   revelationTypes: Record<number, 'Meccan' | 'Medinan'>;
   onVersePress: (verse: MushafVerse) => void;
@@ -67,6 +68,7 @@ const MushafPageComponent: React.FC<MushafPageProps> = ({
   palette: p,
   fontSize,
   selectedKey,
+  recitedKey,
   bookmarked,
   revelationTypes,
   onVersePress,
@@ -154,7 +156,13 @@ const MushafPageComponent: React.FC<MushafPageProps> = ({
                 >
                   {g.verses.map((v) => {
                     const key = `${v.surah}:${v.ayah}`;
-                    const style = key === selectedKey ? { backgroundColor: p.selected } : undefined;
+                    const style =
+                      key === selectedKey
+                        ? { backgroundColor: p.selected }
+                        : key === recitedKey
+                          ? // Verset récité : surligné et souligné d'or.
+                            { backgroundColor: p.playing, textDecorationLine: 'underline' as const, textDecorationColor: p.gold }
+                          : undefined;
                     return (
                       <Text key={key} onPress={() => onVersePress(v)} style={style}>
                         {v.text}{' '}
