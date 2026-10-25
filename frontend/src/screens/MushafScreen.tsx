@@ -270,6 +270,23 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
     if (target !== pageRef.current) goToPage(target, true);
   }, [recitedAyah, isPlaying, playbackSurah, goToPage]);
 
+  // L'utilisateur quitte la page récitée pendant la lecture : la récitation reprend au début
+  // de la page qu'il regarde (après un court délai, pour ne pas relancer à chaque page
+  // traversée en feuilletant). Ne dépend que de la page : quand la récitation tourne
+  // elle-même la page, celle-ci est déjà la page du verset récité.
+  const followTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (followTimer.current) clearTimeout(followTimer.current);
+    if (page === null || !isPlaying || singleVerseRef.current || playbackSurah === null || recitedAyah === null) return;
+    if (pageOfVerse(playbackSurah, recitedAyah) === page) return;
+    followTimer.current = setTimeout(() => {
+      if (pageRef.current !== page) return;
+      const first = MUSHAF_PAGES[page - 1][0];
+      reciteFrom(first.surah, first.ayah);
+    }, 700);
+  }, [page]);
+  useEffect(() => () => { if (followTimer.current) clearTimeout(followTimer.current); }, []);
+
   const stopRecitation = () => {
     singleVerseRef.current = false;
     playbackSurahRef.current = null;
@@ -293,7 +310,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
 
   const handleListenPress = async () => {
     if (page === null) return;
-    if (playbackSurah !== null && recitedAyah !== null) {
+    // En lecture : pause. En pause sur la page récitée : reprise. Sinon : lecture de la page affichée.
+    if (playbackSurah !== null && recitedAyah !== null && (isPlaying || pageOfVerse(playbackSurah, recitedAyah) === page)) {
       // Reprise après un verset écouté seul : la récitation continue, le surlignage la suit.
       if (!isPlaying) singleVerseRef.current = false;
       await togglePlayPause();
