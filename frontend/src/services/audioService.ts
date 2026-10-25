@@ -125,6 +125,9 @@ export const initAudioMode = async (): Promise<void> => {
 // Numéro de sourate d'après le nom du fichier audio (NNN.mp3).
 const surahOfUrl = (url: string | null): number => Number(url?.match(/(\d{3})\.mp3(?:\?.*)?$/)?.[1]) || 0;
 
+/** Sourate de la dernière piste lancée (0 si rien n'a encore été écouté). */
+export const getCurrentSurahNumber = (): number => surahOfUrl(lastUrl);
+
 // « Reprendre l'écoute » : position notée toutes les 5 s pendant une écoute suivie (pas pour
 // un verset écouté seul, comme le verset du jour).
 let lastListenSaveAt = 0;
@@ -169,6 +172,44 @@ const clearNowPlaying = (): void => {
 };
 
 /**
+ * Lance la lecture sans l'attendre. Sur le web, `play()` ne rend la main qu'une fois le son
+ * réellement parti : l'attendre bloquait l'app (bouton figé, impossible d'arrêter, sons
+ * superposés) quand le navigateur tarde. Safari se fige parfois en démarrant loin dans un long
+ * fichier (verset au milieu d'une sourate) : si la position reste figée 3 s alors que le son est
+ * chargé (ou 10 s en tout), le fichier est rechargé au même instant (jusqu'à 3 fois), ce qui le
+ * débloque.
+ */
+const startPlayback = (sound: Audio.Sound): void => {
+  sound.playAsync().catch(() => {});
+  const media = (sound as any)._key;
+  if (Platform.OS !== 'web' || typeof HTMLMediaElement === 'undefined' || !(media instanceof HTMLMediaElement)) return;
+  let last = media.currentTime;
+  let stillFor = 0; // secondes sans progrès alors que le son est déjà chargé
+  let waitingFor = 0; // secondes sans progrès au total (chargement compris)
+  let reloads = 0;
+  const timer = setInterval(() => {
+    if (currentSound !== sound || reloads >= 3) return clearInterval(timer);
+    if (media.paused || Math.abs(media.currentTime - last) > 0.25) {
+      if (media.currentTime > last + 2) clearInterval(timer); // la lecture est bien partie
+      last = media.currentTime;
+      stillFor = waitingFor = 0;
+      return;
+    }
+    // Encore en téléchargement : on laisse faire (jusqu'à 10 s), sinon on interromprait le
+    // chargement. Son disponible mais position figée : c'est le blocage de Safari.
+    waitingFor++;
+    if (media.readyState >= 2) stillFor++;
+    if (stillFor < 3 && waitingFor < 10) return;
+    stillFor = waitingFor = 0;
+    reloads++;
+    const at = media.currentTime;
+    media.load();
+    media.currentTime = at;
+    media.play().catch(() => {});
+  }, 1000);
+};
+
+/**
  * S'abonne aux mises à jour de statut de la lecture audio
  */
 export const subscribeAudioStatus = (callback: (status: SoundStatus) => void) => {
@@ -200,7 +241,7 @@ export const playAudioTrack = async (url: string, startRatio: number = 0, startS
     // startSeconds : la lecture démarre directement à cet instant (un seul chargement).
     const { sound, status } = await Audio.Sound.createAsync(
       { uri: url },
-      { shouldPlay: true, positionMillis: Math.max(0, startSeconds * 1000) },
+      { shouldPlay: false, positionMillis: Math.max(0, startSeconds * 1000) },
       onPlaybackStatusUpdate
     );
 
@@ -209,6 +250,7 @@ export const playAudioTrack = async (url: string, startRatio: number = 0, startS
     lastListenSaveAt = 0;
     pendingStartSeconds = startSeconds > 1 ? startSeconds : null;
     showNowPlaying(url);
+    startPlayback(sound);
 
     if (startRatio > 0 && status.isLoaded && status.durationMillis) {
       const clampedRatio = Math.max(0, Math.min(startRatio, 1));
@@ -270,7 +312,7 @@ export const playAyahOnly = async (
 
     const { sound } = await Audio.Sound.createAsync(
       { uri: url },
-      { shouldPlay: true, positionMillis: Math.max(0, bounds.startSec * 1000) },
+      { shouldPlay: false, positionMillis: Math.max(0, bounds.startSec * 1000) },
       onPlaybackStatusUpdate
     );
 
@@ -279,6 +321,7 @@ export const playAyahOnly = async (
     pendingStartSeconds = bounds.startSec > 1 ? bounds.startSec : null;
     lastUrl = url;
     showNowPlaying(url);
+    startPlayback(sound);
 
     return true;
   } catch (error: any) {
@@ -316,9 +359,18 @@ export const setIsLoopingTrack = async (isLooping: boolean): Promise<void> => {
   }
 };
 
+// Web : expo-av ne considère la lecture « en cours » qu'une fois assez de son chargé. Pendant
+// le chargement, le bouton repassait à « Écouter » et un nouvel appui relançait tout : on tient
+// compte de l'intention de lecture (élément audio lancé, pas en pause).
+const isWebMediaActive = (): boolean => {
+  const media = (currentSound as any)?._key;
+  return Platform.OS === 'web' && typeof HTMLMediaElement !== 'undefined' && media instanceof HTMLMediaElement && !media.paused && !media.ended;
+};
+
 const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
   if (status.isLoaded) {
     const positionSec = status.positionMillis / 1000;
+    const isPlaying = status.isPlaying || isWebMediaActive();
 
     if (pendingStartSeconds !== null && (status.durationMillis || 0) > 0) {
       if (positionSec >= pendingStartSeconds - 1) {
@@ -329,7 +381,7 @@ const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
       }
     }
 
-    if (stopAtSeconds !== null && status.isPlaying && positionSec >= stopAtSeconds) {
+    if (stopAtSeconds !== null && isPlaying && positionSec >= stopAtSeconds) {
       const boundary = stopAtSeconds;
       stopAtSeconds = null;
       currentSound?.pauseAsync().catch(() => {});
@@ -342,10 +394,10 @@ const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
       return;
     }
 
-    if (status.isPlaying) trackListening(positionSec);
+    if (isPlaying) trackListening(positionSec);
 
     notifyListeners({
-      isPlaying: status.isPlaying,
+      isPlaying,
       position: positionSec,
       duration: (status.durationMillis || 0) / 1000,
       isLoaded: true,
@@ -384,10 +436,10 @@ export const togglePlayPause = async (): Promise<void> => {
   try {
     const status = await currentSound.getStatusAsync();
     if (status.isLoaded) {
-      if (status.isPlaying) {
+      if (status.isPlaying || isWebMediaActive()) {
         await currentSound.pauseAsync();
       } else {
-        await currentSound.playAsync();
+        currentSound.playAsync().catch(() => {}); // sans attendre : voir startPlayback
       }
     }
   } catch (error) {

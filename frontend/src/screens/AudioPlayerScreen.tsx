@@ -14,7 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getSurahList } from '../services/quranService';
-import { playAudioFromAyah, subscribeAudioStatus, togglePlayPause, SoundStatus } from '../services/audioService';
+import { getCurrentSurahNumber, playAudioFromAyah, subscribeAudioStatus, togglePlayPause, SoundStatus } from '../services/audioService';
+import { getLastListenPosition } from '../services/bookmarkService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
 import { Surah } from '../types/quran';
 import { FullAudioPlayer, RepeatMode } from '../components/FullAudioPlayer';
@@ -52,15 +53,24 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
       setLoading(true);
       const data = await getSurahList();
       setSurahs(data);
-      if (data.length > 0) {
-        setCurrentSurah(data[0]); // Par défaut Sourate Al-Fatiha
-      }
+      // Sourate affichée : celle en cours d'écoute, sinon la dernière écoutée, sinon Al-Fatiha.
+      const last = getCurrentSurahNumber() || (await getLastListenPosition())?.surahNumber;
+      setCurrentSurah(data.find((s) => s.number === last) ?? data[0] ?? null);
     } catch (e) {
       console.error('Erreur chargement sourates audio:', e);
     } finally {
       setLoading(false);
     }
   };
+
+  // Une écoute lancée ailleurs (verset du jour, Mushaf) : le mini-lecteur suit la bonne sourate.
+  useEffect(() => {
+    const playing = getCurrentSurahNumber();
+    if (playing && playing !== currentSurah?.number) {
+      const surah = surahs.find((s) => s.number === playing);
+      if (surah) setCurrentSurah(surah);
+    }
+  }, [audioStatus.isLoaded, surahs]);
 
   const handlePlaySurah = async (surah: Surah, ayah = 1) => {
     setCurrentSurah(surah);

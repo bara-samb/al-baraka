@@ -14,6 +14,7 @@ import {
   NativeSyntheticEvent,
   useWindowDimensions,
   Image,
+  Platform,
 } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,6 +68,18 @@ import { MushafTabScreenProps } from '../navigation/types';
 // transformations rend le défilement instable sur le web.
 const PAGE_NUMBERS = Array.from({ length: MUSHAF_PAGE_COUNT }, (_, i) => MUSHAF_PAGE_COUNT - i);
 const indexOfPage = (page: number) => MUSHAF_PAGE_COUNT - page;
+// Safari et tous les navigateurs d'iPhone (moteur WebKit) : l'aimantation des pages par le
+// navigateur (scroll-snap, utilisé par `pagingEnabled` sur le web) fait glisser la liste toute
+// seule de page en page. On y cale donc la page la plus proche nous-mêmes, une fois le
+// défilement terminé.
+const IS_WEBKIT_WEB = (() => {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  const isIOS = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  return isIOS || (/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|Android/.test(ua));
+})();
+const SNAP_DELAY_MS = 120;
+
 // Barre d'onglets flottante (bottom 12 + hauteur 68) : le Mushaf s'arrête au-dessus.
 const TAB_BAR_SPACE = 84;
 
@@ -217,14 +230,23 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
     [onPageVisible]
   );
 
+  const snapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const index = Math.round(e.nativeEvent.contentOffset.x / width);
+      const x = e.nativeEvent.contentOffset.x;
+      const index = Math.round(x / width);
       const visible = PAGE_NUMBERS[index];
       if (visible) onPageVisible(visible);
+      if (IS_WEBKIT_WEB) {
+        if (snapTimer.current) clearTimeout(snapTimer.current);
+        snapTimer.current = setTimeout(() => {
+          if (Math.abs(x - index * width) > 1) listRef.current?.scrollToOffset({ offset: index * width, animated: true });
+        }, SNAP_DELAY_MS);
+      }
     },
     [width, onPageVisible]
   );
+  useEffect(() => () => { if (snapTimer.current) clearTimeout(snapTimer.current); }, []);
 
   // ---------- Récitation ----------
 
@@ -387,7 +409,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
             renderItem={renderPage}
             extraData={renderPage}
             horizontal
-            pagingEnabled
+            pagingEnabled={!IS_WEBKIT_WEB}
             showsHorizontalScrollIndicator={false}
             getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
             initialScrollIndex={indexOfPage(page)}

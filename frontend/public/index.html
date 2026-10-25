@@ -29,8 +29,6 @@
     <meta name="twitter:image" content="https://al-baraka-app.pages.dev/og-photo.jpg" />
 
     <!-- PWA : installation sur l'écran d'accueil + fonctionnement hors ligne (voir sw.js) -->
-    <!-- Récitations sur archive.org : connexion ouverte dès le chargement de la page. -->
-    <link rel="preconnect" href="https://archive.org" crossorigin />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
@@ -61,10 +59,42 @@
           background-color: #0b3a2b;
         }
       }
+      /* iPhone (Safari) : pas de zoom au double appui (chapelet tapé rapidement), pas de reflet
+         gris à chaque appui, ni de sélection du texte ou de menu « Copier » sur un appui long
+         (versets du Mushaf). Le zoom à deux doigts reste possible. */
+      html {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      body {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+      input,
+      textarea {
+        -webkit-user-select: text;
+        user-select: text;
+      }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;
       }
+      /* Écran d'accueil affiché pendant le premier chargement de l'app (remplacé par l'app). */
+      #splash {
+        position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 14px; background: #0b3a2b; color: #f6e7b8;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; text-align: center;
+      }
+      #splash img { width: 96px; height: 96px; border-radius: 22px; }
+      #splash h1 { margin: 6px 0 0; font-size: 30px; letter-spacing: 5px; color: #fff; font-weight: 800; }
+      #splash p { margin: 0; font-size: 15px; color: #d8b566; }
+      #splash i {
+        margin-top: 18px; width: 30px; height: 30px; border-radius: 50%;
+        border: 3px solid rgba(216, 181, 102, 0.25); border-top-color: #d8b566;
+        animation: splash-spin 0.9s linear infinite;
+      }
+      @keyframes splash-spin { to { transform: rotate(360deg); } }
       /* These styles make the root element full-height */
       #root {
         display: flex;
@@ -79,7 +109,14 @@
       Activez JavaScript pour utiliser AL BARAKA.
     </noscript>
     <!-- The root element for your Expo app. -->
-    <div id="root"></div>
+    <div id="root">
+      <div id="splash">
+        <img src="/icons/icon-192.png" alt="" />
+        <h1>AL BARAKA</h1>
+        <p>Le Saint Coran en riwaya Warsh</p>
+        <i></i>
+      </div>
+    </div>
 
     <script>
       // Le service worker n'est enregistré que pour l'app exportée (`npm run build:web`) :

@@ -96,15 +96,16 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  isDark: true,
-  colors: darkColors,
+  isDark: false,
+  colors: lightColors,
   toggleTheme: () => {},
 });
 
 const THEME_KEY = '@albaraka_theme_mode';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isDark, setIsDark] = useState<boolean>(true);
+  // Première ouverture : thème clair, aux couleurs du Mushaf.
+  const [isDark, setIsDark] = useState<boolean>(false);
 
   useEffect(() => {
     loadTheme();
