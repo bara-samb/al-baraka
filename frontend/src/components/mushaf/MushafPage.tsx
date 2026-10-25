@@ -160,8 +160,8 @@ const MushafPageComponent: React.FC<MushafPageProps> = ({
                       key === selectedKey
                         ? { backgroundColor: p.selected }
                         : key === recitedKey
-                          ? // Verset récité : surligné et souligné d'or.
-                            { backgroundColor: p.playing, textDecorationLine: 'underline' as const, textDecorationColor: p.gold }
+                          ? // Verset récité : surligné.
+                            { backgroundColor: p.playing }
                           : undefined;
                     return (
                       <Text key={key} onPress={() => onVersePress(v)} style={style}>
