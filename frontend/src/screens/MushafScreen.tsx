@@ -23,7 +23,6 @@ import { useTheme } from '../context/ThemeContext';
 import { getSurahList } from '../services/quranService';
 import { DEFAULT_ARABIC_FONT_SIZE, getArabicFontSize, setArabicFontSize, subscribeFontSizeChange } from '../services/settingsService';
 import { setImmersive } from '../services/immersiveMode';
-import { shareVerse } from '../services/verseCard';
 import {
   playAyahOnly,
   playAudioFromAyah,
@@ -57,6 +56,7 @@ import {
   toArabicDigits,
 } from '../services/warshMushafService';
 import { SettingsModal } from '../components/SettingsModal';
+import { VerseShareSheet } from '../components/VerseShareSheet';
 import { MushafIndexModal, MushafIndexTab } from '../components/mushaf/MushafIndexModal';
 import { MushafPage } from '../components/mushaf/MushafPage';
 import { MushafSearchModal } from '../components/mushaf/MushafSearchModal';
@@ -104,6 +104,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
   const [indexTab, setIndexTab] = useState<MushafIndexTab>('surahs');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sheetVerse, setSheetVerse] = useState<MushafVerse | null>(null);
+  const [shareTarget, setShareTarget] = useState<MushafVerse | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   // Verset ouvert depuis la recherche : surligné sur sa page.
   const [foundVerse, setFoundVerse] = useState<MushafVerse | null>(null);
@@ -365,8 +366,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
     showToast('Verset copié');
   };
 
-  // Image aux couleurs de l'app (web), texte mis en forme ailleurs : voir verseCard.
-  const handleShare = (v: MushafVerse) => shareVerse(v.surah, v.ayah);
+  // Image ou vidéo aux couleurs de l'app (web), texte mis en forme ailleurs : voir VerseShareSheet.
+  const handleShare = (v: MushafVerse) => setShareTarget(v);
 
   const handleVersePress = useCallback((v: MushafVerse) => setSheetVerse(v), []);
   const handleBackgroundPress = useCallback(() => setChromeVisible((visible) => !visible), []);
@@ -593,6 +594,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
           )}
         </Pressable>
       </Modal>
+
+      <VerseShareSheet verse={shareTarget} onClose={() => setShareTarget(null)} />
 
       <MushafIndexModal
         visible={indexVisible}

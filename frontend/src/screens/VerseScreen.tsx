@@ -7,7 +7,7 @@ import { getMushafVerse, surahNameAr, surahNameLatin, toArabicDigits } from '../
 import { getFrenchVerseTranslation } from '../services/quranService';
 import { playAyahOnly, stopAudioTrack, subscribeAudioStatus } from '../services/audioService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
-import { shareVerse } from '../services/verseCard';
+import { VerseShareSheet } from '../components/VerseShareSheet';
 import { DIGITS_FONT } from '../components/mushaf/mushafTheme';
 
 /** Page d'un verset (verset du jour) : texte Warsh, traductions, écoute et partage. */
@@ -19,6 +19,7 @@ export const VerseScreen: React.FC<VerseScreenProps> = ({ route, navigation }) =
   // undefined : chargement ; null : traduction indisponible (hors ligne).
   const [french, setFrench] = useState<string | null | undefined>(undefined);
   const [playing, setPlaying] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     getFrenchVerseTranslation(surah, ayah).then(setFrench);
@@ -77,7 +78,7 @@ export const VerseScreen: React.FC<VerseScreenProps> = ({ route, navigation }) =
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.secondaryBtn, { borderColor: colors.gold }]}
-            onPress={() => shareVerse(surah, ayah)}
+            onPress={() => setSharing(true)}
             activeOpacity={0.85}
           >
             <Ionicons name="share-social-outline" size={16} color={colors.gold} />
@@ -105,6 +106,8 @@ export const VerseScreen: React.FC<VerseScreenProps> = ({ route, navigation }) =
           </Text>
         </View>
       </ScrollView>
+
+      <VerseShareSheet verse={sharing ? { surah, ayah } : null} onClose={() => setSharing(false)} />
     </SafeAreaView>
   );
 };
