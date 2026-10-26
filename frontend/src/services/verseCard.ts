@@ -1,15 +1,12 @@
 import { Platform, Share } from 'react-native';
 import { mushafLight as P } from '../components/mushaf/mushafTheme';
-import { getAudioUrlForSurah } from '../config/audioConfig';
-import { getAyahBoundsSeconds } from './audioService';
 import { getFrenchVerseTranslation } from './quranService';
 import { getMushafVerse, surahNameAr, surahNameLatin, toArabicDigits } from './warshMushafService';
 
 /**
- * Partage d'un verset aux couleurs de l'app. Sur le web : une image (papier ivoire, cadre vert
- * et or, texte Warsh et traduction française) dessinée dans un canvas, ou une vidéo de cette
- * image sur la récitation du verset. Ailleurs, ou si le navigateur ne sait pas partager de
- * fichier, un texte mis en forme.
+ * Partage d'un verset aux couleurs de l'app. Sur le web : une image (icône de l'app, papier
+ * ivoire, cadre vert et or, texte Warsh et traduction française) dessinée dans un canvas.
+ * Ailleurs, ou si le navigateur ne sait pas partager de fichier, un texte mis en forme.
  */
 
 const W = 1080;
@@ -36,22 +33,13 @@ const loadLogo = (): Promise<HTMLImageElement | null> => {
 export interface VerseCard {
   surah: number;
   ayah: number;
-  /** Image finale, sans barre de progression. */
-  canvas: HTMLCanvasElement;
   blob: Blob;
   /** Traduction française, ou null hors connexion. */
   french: string | null;
 }
 
-/** Vrai sur le web, où l'image (et la vidéo) peuvent être dessinées. */
+/** Vrai sur le web, où l'image peut être dessinée. */
 export const canDrawCard = (): boolean => Platform.OS === 'web' && typeof document !== 'undefined';
-
-/** Vrai si le navigateur sait enregistrer une vidéo du canvas avec le son. */
-export const canRecordVideo = (): boolean =>
-  canDrawCard() &&
-  typeof MediaRecorder !== 'undefined' &&
-  typeof (HTMLCanvasElement.prototype as any).captureStream === 'function' &&
-  typeof (window as any).AudioContext !== 'undefined';
 
 const shareText = (surah: number, ayah: number, french: string | null) => {
   const verse = getMushafVerse(surah, ayah);
@@ -233,7 +221,7 @@ export const buildVerseCard = async (surah: number, ayah: number): Promise<Verse
   const french = await frenchWithTimeout(surah, ayah);
   const canvas = await drawCard(surah, ayah, verse.text, verse.page, french);
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-  return blob ? { surah, ayah, canvas, blob, french } : null;
+  return blob ? { surah, ayah, blob, french } : null;
 };
 
 /**
@@ -266,140 +254,3 @@ export const shareVerse = async (surah: number, ayah: number): Promise<void> => 
   if (!card) return shareVerseText(surah, ayah);
   await shareFile(card.blob, `al-baraka-${surah}-${ayah}.png`, surah, ayah);
 };
-
-const VIDEO_TYPES = [
-  'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-  'video/mp4',
-  'video/webm;codecs=vp9,opus',
-  'video/webm;codecs=vp8,opus',
-  'video/webm',
-];
-
-export interface VerseRecording {
-  /** Promesse de la vidéo terminée. */
-  done: Promise<Blob>;
-  /** Interrompt l'enregistrement (la promesse est alors rejetée). */
-  cancel: () => void;
-}
-
-/**
- * Enregistre la vidéo d'un verset : l'image du verset, une barre de progression dorée, et la
- * récitation du verset (de son début à sa fin dans le MP3 de la sourate). L'enregistrement se
- * fait en temps réel et sans son dans le haut-parleur.
- *
- * Doit être appelé directement depuis un toucher de l'utilisateur : le son ne peut démarrer
- * qu'ainsi sur iPhone. Tout ce qui précède la lecture est donc synchrone.
- */
-export const recordVerseVideo = (card: VerseCard, onProgress: (ratio: number) => void): VerseRecording => {
-  const bounds = getAyahBoundsSeconds(card.surah, card.ayah);
-  if (!bounds) return { done: Promise.reject(new Error('Minutage du verset indisponible')), cancel: () => {} };
-  const { startSec, endSec } = bounds;
-  const duration = endSec - startSec;
-
-  // Son : élément audio → AudioContext → flux enregistrable (rien vers le haut-parleur).
-  const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
-  const audioCtx: AudioContext = new AudioCtx();
-  const audio = new Audio();
-  audio.crossOrigin = 'anonymous';
-  audio.preload = 'auto';
-  audio.src = getAudioUrlForSurah(card.surah);
-  const source = audioCtx.createMediaElementSource(audio);
-  const destination = audioCtx.createMediaStreamDestination();
-  source.connect(destination);
-  audioCtx.resume().catch(() => {});
-  // Déverrouille la lecture tant que le toucher de l'utilisateur est encore valable.
-  const unlock = audio.play().then(() => audio.pause()).catch(() => {});
-
-  // Image : la carte, redessinée à chaque image avec la barre de progression.
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
-  const drawFrame = (ratio: number) => {
-    ctx.drawImage(card.canvas, 0, 0);
-    ctx.fillStyle = P.goldSoft;
-    roundRect(ctx, 140, H - 60, W - 280, 8, 4);
-    ctx.fill();
-    ctx.fillStyle = P.gold;
-    roundRect(ctx, 140, H - 60, Math.max(8, (W - 280) * ratio), 8, 4);
-    ctx.fill();
-  };
-  drawFrame(0);
-
-  const stream = new MediaStream([
-    ...(canvas as any).captureStream(30).getVideoTracks(),
-    ...destination.stream.getAudioTracks(),
-  ]);
-  const mimeType = VIDEO_TYPES.find((t) => MediaRecorder.isTypeSupported(t));
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 2_500_000 } : undefined);
-  const chunks: Blob[] = [];
-  recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let cancelled = false;
-  const cleanup = () => {
-    if (timer) clearInterval(timer);
-    audio.pause();
-    audio.removeAttribute('src');
-    audioCtx.close().catch(() => {});
-  };
-
-  const done = new Promise<Blob>((resolve, reject) => {
-    recorder.onstop = () => {
-      cleanup();
-      if (cancelled) return reject(new Error('cancelled'));
-      resolve(new Blob(chunks, { type: (recorder.mimeType || mimeType || 'video/webm').split(';')[0] }));
-    };
-    const fail = (err: unknown) => {
-      cleanup();
-      if (recorder.state !== 'inactive') recorder.stop();
-      reject(err instanceof Error ? err : new Error(String(err)));
-    };
-    audio.onerror = () => fail(new Error('Audio indisponible'));
-
-    unlock.then(async () => {
-      if (cancelled) return reject(new Error('cancelled'));
-      // Se place au début du verset (certains navigateurs mobiles demandent d'insister).
-      await new Promise<void>((res) => {
-        const seek = () => {
-          audio.currentTime = startSec;
-        };
-        audio.onseeked = () => {
-          if (Math.abs(audio.currentTime - startSec) < 0.5) res();
-          else seek();
-        };
-        if (audio.readyState >= 1) seek();
-        else audio.onloadedmetadata = seek;
-      });
-      if (cancelled) return reject(new Error('cancelled'));
-      recorder.start(500);
-      await audio.play();
-      const safety = Date.now() + (duration + 15) * 1000;
-      timer = setInterval(() => {
-        const ratio = Math.min(1, Math.max(0, (audio.currentTime - startSec) / duration));
-        drawFrame(ratio);
-        onProgress(ratio);
-        if (audio.currentTime >= endSec || audio.ended || Date.now() > safety) {
-          drawFrame(1);
-          onProgress(1);
-          clearInterval(timer);
-          audio.pause();
-          // Une courte image fixe à la fin, pour que la dernière syllabe ne soit pas coupée.
-          setTimeout(() => recorder.state !== 'inactive' && recorder.stop(), 400);
-        }
-      }, 1000 / 30);
-    }).catch(fail);
-  });
-
-  return {
-    done,
-    cancel: () => {
-      cancelled = true;
-      if (recorder.state !== 'inactive') recorder.stop();
-      else cleanup();
-    },
-  };
-};
-
-/** Extension du fichier vidéo selon le format produit par le navigateur. */
-export const videoExtension = (blob: Blob): string => (blob.type.includes('mp4') ? 'mp4' : 'webm');
