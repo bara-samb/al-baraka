@@ -29,6 +29,7 @@ const ROOT = path.join(__dirname, '..');
 const DATA_DIR = path.join(ROOT, 'frontend', 'src', 'data');
 const AUDIO_DIR = path.join(ROOT, 'backend', 'uploads', 'audios', 'serigne-aboul-baraka-mbacke');
 const FONT_PATH = path.join(ROOT, 'frontend', 'assets', 'fonts', 'KFGQPC_Warsh.ttf');
+const ICON_PATH = path.join(ROOT, 'frontend', 'public', 'icons', 'app-badge-256.png');
 const CACHE_DIR = path.join(__dirname, 'cache');
 const OUT_DIR = path.join(__dirname, 'out');
 
@@ -126,7 +127,8 @@ function findChrome() {
 class Renderer {
   async open(format) {
     this.format = format;
-    const html = fs.readFileSync(path.join(__dirname, 'template.html'), 'utf8').replace('__WARSH_FONT__', pathToFileURL(FONT_PATH).href);
+    const html = fs.readFileSync(path.join(__dirname, 'template.html'), 'utf8').replace('__WARSH_FONT__', pathToFileURL(FONT_PATH).href)
+      .replace(/__APP_ICON__/g, pathToFileURL(ICON_PATH).href);
     fs.mkdirSync(CACHE_DIR, { recursive: true });
     const file = path.join(CACHE_DIR, 'template.html');
     fs.writeFileSync(file, html);

@@ -20,6 +20,19 @@ const LATIN_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
 const cleanText = (text: string) => text.replace(/۞\s*/g, '').trim();
 
+// Icône de l'app (photo dans l'étoile du Mushaf, video/chaine/icone-app-1024.png en grand),
+// chargée une fois ; null si elle manque : l'en-tête reste textuel.
+let logoPromise: Promise<HTMLImageElement | null> | null = null;
+const loadLogo = (): Promise<HTMLImageElement | null> => {
+  logoPromise ??= new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = '/icons/app-badge-256.png';
+  });
+  return logoPromise;
+};
+
 export interface VerseCard {
   surah: number;
   ayah: number;
@@ -87,7 +100,10 @@ const roundRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 };
 
 const drawCard = async (surah: number, ayah: number, text: string, page: number, french: string | null): Promise<HTMLCanvasElement> => {
-  await Promise.all([document.fonts.load(`64px ${WARSH_FONT}`), document.fonts.ready]).catch(() => {});
+  const [logo] = await Promise.all([
+    loadLogo(),
+    Promise.all([document.fonts.load(`64px ${WARSH_FONT}`), document.fonts.ready]).catch(() => {}),
+  ]);
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -107,15 +123,21 @@ const drawCard = async (surah: number, ayah: number, text: string, page: number,
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // En-tête.
+  // En-tête : emblème et nom de l'app, centrés ensemble.
   ctx.fillStyle = P.gold;
   ctx.font = `bold 30px ${LATIN_FONT}`;
   ctx.letterSpacing = '8px';
-  ctx.fillText('AL BARAKA', W / 2, 130);
+  const logoSize = logo ? 72 : 0;
+  const nameWidth = ctx.measureText('AL BARAKA').width;
+  const rowLeft = W / 2 - (logoSize + (logo ? 18 : 0) + nameWidth) / 2;
+  if (logo) ctx.drawImage(logo, rowLeft, 122 - logoSize / 2, logoSize, logoSize);
+  ctx.textAlign = 'left';
+  ctx.fillText('AL BARAKA', rowLeft + logoSize + (logo ? 18 : 0), 124);
+  ctx.textAlign = 'center';
   ctx.letterSpacing = '0px';
 
   // Bandeau de la sourate.
-  const bannerY = 180;
+  const bannerY = 186;
   ctx.fillStyle = P.green;
   roundRect(ctx, 140, bannerY, W - 280, 120, 60);
   ctx.fill();
