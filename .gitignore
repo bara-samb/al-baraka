@@ -39,3 +39,8 @@ Thumbs.db
 
 # Cache Python
 __pycache__/
+
+# Outil vidéo : vidéos générées, fichiers temporaires, identifiants Google
+video/out/
+video/cache/
+video/secrets/

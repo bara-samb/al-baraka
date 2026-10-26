@@ -136,6 +136,7 @@ AL BARAKA/
 │       ├── config/audioConfig.ts      adresse des MP3 (production ou serveur local)
 │       ├── data/                Mushaf Warsh, minutages des versets, correspondance Warsh/Hafs
 │       └── assets/              photo du récitateur
+├── video/                       vidéos YouTube, Shorts et TikTok des récitations (voir video/README.md)
 └── backend/                     outils hors application
     ├── server.ts                serveur Express de développement (audio local, envoi de MP3)
     ├── scripts/                 génération des données (Mushaf, minutages, correspondance) et envoi archive.org

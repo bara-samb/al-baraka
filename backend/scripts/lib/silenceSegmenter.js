@@ -355,6 +355,8 @@ async function analyzeSurah(filePath, verseTexts, surahNumber) {
     totalDuration,
     segments,
     prelude: prelude.map((p) => p.label),
+    // Fin du prélude (isti'adha, basmala) : début réel de la récitation du verset 1.
+    preludeEndSec: prelude.length ? Number(pauses[result.chosen[prelude.length - 1]].cut.toFixed(2)) : 0,
     incomplete: false,
     anomalies,
   };

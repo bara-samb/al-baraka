@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+  /* Couleurs du Mushaf clair de l'app (frontend/src/components/mushaf/mushafTheme.ts). */
+  :root {
+    --page: #FBF7EA; --ink: #1F1A12; --title: #145C45; --muted: #7C705A;
+    --gold: #B0832C; --gold-soft: #E4C985; --green: #145C45; --green-deep: #0B3A2B; --on-green: #F6E7B8;
+    --latin: "Segoe UI", system-ui, sans-serif;
+  }
+  @font-face { font-family: Warsh; src: url("__WARSH_FONT__"); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; background: var(--green-deep); overflow: hidden; }
+  body { padding: var(--outer); }
+  .page {
+    position: relative; width: 100%; height: 100%; background: var(--page);
+    border-radius: 36px; padding: var(--inner);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .page::after {
+    content: ""; position: absolute; inset: 20px; border: 3px solid var(--gold);
+    border-radius: 26px; pointer-events: none;
+  }
+  .brand { font: 700 30px var(--latin); letter-spacing: 8px; color: var(--gold); }
+  .banner {
+    margin-top: 18px; padding: 6px 70px 14px; border-radius: 60px; background: var(--green);
+    border: 4px solid var(--gold-soft); color: var(--on-green); font: 56px Warsh; direction: rtl;
+  }
+  .ref { margin-top: 14px; font: 700 32px var(--latin); color: var(--title); }
+  .body {
+    flex: 1; width: 100%; min-height: 0; overflow: hidden; margin: 20px 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0.5em;
+  }
+  .ayah { font-family: Warsh; direction: rtl; text-align: center; line-height: 1.9; color: var(--ink); }
+  .fr { font-family: var(--latin); text-align: center; line-height: 1.4; color: var(--muted); font-style: italic; max-width: 92%; }
+  .basmala { font: 96px Warsh; direction: rtl; color: var(--ink); }
+  .big { font: 700 64px var(--latin); color: var(--title); text-align: center; }
+  .sub { font: 40px var(--latin); color: var(--muted); text-align: center; line-height: 1.4; white-space: pre-line; }
+  .foot { text-align: center; }
+  .foot .rule { width: 240px; height: 2px; background: var(--gold-soft); margin: 0 auto 14px; }
+  .foot .reciter { font: 28px var(--latin); color: var(--ink); }
+  .foot .site { margin-top: 6px; font: 700 26px var(--latin); color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="page" id="page"></div>
+<script>
+  // Dessine un écran puis réduit le texte jusqu'à ce qu'il tienne dans la zone centrale.
+  window.draw = async (s) => {
+    document.documentElement.style.setProperty('--outer', s.outer + 'px');
+    document.documentElement.style.setProperty('--inner', s.inner);
+    const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const head = s.surahAr
+      ? `<div class="brand">AL BARAKA</div><div class="banner">سورة ${esc(s.surahAr)}</div>` +
+        (s.ref ? `<div class="ref">${esc(s.ref)}</div>` : '')
+      : `<div class="brand">AL BARAKA</div>`;
+    let body = '';
+    if (s.kind === 'ayah') {
+      body = `<div class="ayah">${esc(s.ayah)}</div>` + (s.fr ? `<div class="fr">${esc(s.fr)}</div>` : '');
+    } else if (s.kind === 'intro') {
+      body = (s.basmala ? `<div class="basmala">${esc(s.basmala)}</div>` : '') +
+        `<div class="big">${esc(s.title)}</div><div class="sub">${esc(s.subtitle)}</div>`;
+    } else {
+      body = `<div class="big">${esc(s.title)}</div><div class="sub">${esc(s.subtitle)}</div>`;
+    }
+    document.getElementById('page').innerHTML =
+      head + `<div class="body" id="body">${body}</div>` +
+      `<div class="foot"><div class="rule"></div><div class="reciter">Récitation de Serigne Aboul Baraka Mbacké</div>` +
+      `<div class="site">${esc(s.site)}</div></div>`;
+    await document.fonts.ready;
+    if (s.kind !== 'ayah') return true;
+
+    const box = document.getElementById('body');
+    const ayah = box.querySelector('.ayah');
+    const fr = box.querySelector('.fr');
+    for (let size = s.maxSize; size >= s.minSize; size -= 2) {
+      ayah.style.fontSize = size + 'px';
+      if (fr) fr.style.fontSize = Math.max(24, Math.round(size * 0.42)) + 'px';
+      if (box.scrollHeight <= box.clientHeight) return true;
+    }
+    return false;
+  };
+</script>
+</body>
+</html>
