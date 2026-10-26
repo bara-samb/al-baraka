@@ -1,5 +1,10 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { NavigatorScreenParams } from '@react-navigation/native';
+
+// Récitation à lancer en ouvrant le Mushaf (depuis les favoris) : le verset seul, une fois ou en
+// boucle, ou toute la sourate, une fois ou en boucle.
+export type MushafPlayRequest = 'verse' | 'verseLoop' | 'surah' | 'surahLoop';
 
 export type MainTabParamList = {
   HomeTab: undefined;
@@ -7,13 +12,14 @@ export type MainTabParamList = {
   AudioTab: { surah: number; ayah: number; at?: number } | undefined;
   // Verset à afficher en ouvrant le Mushaf (surligné sauf `highlight: false`, pour reprendre
   // la lecture) ; `at` distingue deux demandes identiques.
-  MushafTab: { surah: number; ayah: number; at?: number; highlight?: boolean } | undefined;
+  MushafTab: { surah: number; ayah: number; at?: number; highlight?: boolean; play?: MushafPlayRequest } | undefined;
   TasbihTab: undefined;
   SadaqahTab: undefined;
 };
 
 export type RootStackParamList = {
-  MainTabs: undefined;
+  // Un onglet précis peut être ouvert depuis une page de la pile (ex. une sourate favorite dans le Mushaf).
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Surah: {
     surahNumber: number;
     surahName: string;

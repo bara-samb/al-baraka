@@ -30,7 +30,10 @@ import {
   stopAudioTrack,
   subscribeAudioStatus,
   getAyahAtPosition,
+  playSurahLoop,
 } from '../services/audioService';
+import { getFavoriteAyahs, subscribeFavoritesChange, toggleFavoriteVerse } from '../services/favoritesService';
+import { getFrenchVerseTranslation } from '../services/quranService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
 import {
   saveLastReadPosition,
@@ -61,7 +64,7 @@ import { MushafIndexModal, MushafIndexTab } from '../components/mushaf/MushafInd
 import { MushafPage } from '../components/mushaf/MushafPage';
 import { MushafSearchModal } from '../components/mushaf/MushafSearchModal';
 import { DIGITS_FONT, MushafPalette, mushafDark, mushafLight } from '../components/mushaf/mushafTheme';
-import { MushafTabScreenProps } from '../navigation/types';
+import { MushafPlayRequest, MushafTabScreenProps } from '../navigation/types';
 
 // Sens de lecture arabe : la dernière page est à gauche, la page 1 tout à droite. La liste
 // est construite dans cet ordre plutôt qu'avec `inverted`, dont le retournement par
@@ -87,7 +90,7 @@ const reciterPhoto = require('../assets/serigne_abdou_bara.jpg');
 
 const verseKey = (v: { surah: number; ayah: number }) => `${v.surah}:${v.ayah}`;
 
-export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
+export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation }) => {
   const { isDark } = useTheme();
   const p = isDark ? mushafDark : mushafLight;
   const { width } = useWindowDimensions();
@@ -97,6 +100,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
   const [fontSize, setFontSize] = useState(DEFAULT_ARABIC_FONT_SIZE);
   const [revelationTypes, setRevelationTypes] = useState<Record<number, 'Meccan' | 'Medinan'>>({});
   const [bookmark, setBookmark] = useState<MushafBookmark | null>(null);
+  // Versets favoris (« sourate:verset »), pour le libellé Ajouter / Retirer des favoris.
+  const [favoriteKeys, setFavoriteKeys] = useState<Set<string>>(new Set());
   const [chromeVisible, setChromeVisible] = useState(true);
   // Hauteur de l'en-tête : la bulle de récitation se place juste en dessous.
   const [topBarHeight, setTopBarHeight] = useState(0);
@@ -117,6 +122,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
   // « Écouter ce verset » : le verset reste celui choisi. Sans cela, la position de lecture
   // (0 au chargement, début du verset suivant à l'arrêt) ferait surligner un autre verset.
   const singleVerseRef = useRef(false);
+  // « Écouter en boucle » : le verset choisi se répète jusqu'à l'arrêt.
+  const [looping, setLooping] = useState(false);
 
   const [toast, setToast] = useState<string | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
@@ -147,6 +154,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
       if (requested) {
         if (route.params?.highlight !== false) setFoundVerse(requested);
         openAt(requested.page);
+        if (route.params?.play) startRequestedPlay(requested, route.params.play);
         return;
       }
       const lastPage = await getMushafLastPage();
@@ -167,7 +175,15 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
     if (!v) return;
     setFoundVerse(route.params.highlight === false ? null : v);
     goToPage(v.page);
+    if (route.params.play) startRequestedPlay(v, route.params.play);
   }, [route.params?.at]);
+
+  useEffect(() => {
+    const load = () =>
+      getFavoriteAyahs().then((list) => setFavoriteKeys(new Set(list.map((i) => `${i.surahNumber}:${i.ayah.numberInSurah}`))));
+    load();
+    return subscribeFavoritesChange(load);
+  }, []);
 
   // Taille du texte changée depuis les paramètres de l'accueil.
   useEffect(() => subscribeFontSizeChange(setFontSize), []);
@@ -290,19 +306,22 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
 
   const stopRecitation = () => {
     singleVerseRef.current = false;
+    setLooping(false);
     playbackSurahRef.current = null;
     setPlaybackSurah(null);
     setRecitedAyah(null);
     setIsPlaying(false);
   };
 
-  const reciteFrom = async (surah: number, ayah: number) => {
+  // `loop` : toute la sourate, depuis le début, recommence à la fin (écoute en boucle des favoris).
+  const reciteFrom = async (surah: number, ayah: number, loop = false) => {
     const url = await getEffectiveAudioUrl(surah);
     singleVerseRef.current = false;
+    setLooping(loop);
     playbackSurahRef.current = surah;
     setPlaybackSurah(surah);
-    setRecitedAyah(ayah);
-    const ok = await playAudioFromAyah(url, surah, ayah, surahVerseCount(surah));
+    setRecitedAyah(loop ? 1 : ayah);
+    const ok = loop ? await playSurahLoop(url) : await playAudioFromAyah(url, surah, ayah, surahVerseCount(surah));
     if (!ok) {
       stopRecitation();
       showToast('Audio indisponible');
@@ -327,35 +346,52 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
     stopRecitation();
   };
 
-  const playSingleVerse = async (v: MushafVerse) => {
+  const playSingleVerse = async (v: MushafVerse, loop = false) => {
     const url = await getEffectiveAudioUrl(v.surah);
     singleVerseRef.current = true;
+    setLooping(loop);
     playbackSurahRef.current = v.surah;
     setPlaybackSurah(v.surah);
     setRecitedAyah(v.ayah);
-    const ok = await playAyahOnly(url, v.surah, v.ayah);
+    const ok = await playAyahOnly(url, v.surah, v.ayah, loop);
     if (!ok) {
       stopRecitation();
       showToast('Audio indisponible');
+    } else if (loop) {
+      showToast(`En boucle · ${surahNameLatin(v.surah)} ${v.ayah}`);
     }
   };
 
-  // ---------- Signet / actions sur un verset ----------
-
-  const placeBookmark = async (v: MushafVerse) => {
-    setBookmark(await saveMushafBookmark(v.surah, v.ayah, v.page));
-    showToast(`Signet placé · ${surahNameLatin(v.surah)} ${v.ayah}`);
+  // Écoute demandée depuis les favoris : le verset ou la sourate, une fois ou en boucle, surligné ici.
+  // À l'ouverture du Mushaf, les deux effets qui lisent la demande la voient : elle n'est lancée
+  // qu'une fois (sinon deux sons partent ensemble et l'un échappe à la boucle).
+  const playedAtRef = useRef<number | undefined>(undefined);
+  const startRequestedPlay = (v: MushafVerse, play: MushafPlayRequest) => {
+    if (playedAtRef.current === route.params?.at) return;
+    playedAtRef.current = route.params?.at;
+    if (play === 'verse' || play === 'verseLoop') playSingleVerse(v, play === 'verseLoop');
+    else reciteFrom(v.surah, 1, play === 'surahLoop');
   };
 
-  const handleBookmarkPress = async () => {
-    if (page === null) return;
-    if (bookmark?.page === page) {
+  // ---------- Favoris, marque-page / actions sur un verset ----------
+
+  const handleFavorite = async (v: MushafVerse) => {
+    // La traduction est gardée avec le favori, pour l'afficher dans la liste (si on l'a).
+    const translation = favoriteKeys.has(verseKey(v)) ? null : await getFrenchVerseTranslation(v.surah, v.ayah);
+    const added = await toggleFavoriteVerse(v.surah, v.ayah, translation);
+    showToast(added ? `Ajouté aux favoris · ${surahNameLatin(v.surah)} ${v.ayah}` : 'Retiré des favoris');
+  };
+
+  // Marque-page : l'endroit où l'on s'est arrêté (un seul, ruban sur la page).
+  const handleMarker = async (v: MushafVerse) => {
+    if (bookmark?.surahNumber === v.surah && bookmark.verseNumber === v.ayah) {
       await clearMushafBookmark();
       setBookmark(null);
-      showToast('Signet retiré');
+      showToast('Marque-page retiré');
       return;
     }
-    await placeBookmark(MUSHAF_PAGES[page - 1][0]);
+    setBookmark(await saveMushafBookmark(v.surah, v.ayah, v.page));
+    showToast(`Marque-page placé · ${surahNameLatin(v.surah)} ${v.ayah}`);
   };
 
   const verseReference = (v: MushafVerse) =>
@@ -535,12 +571,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
             style={reciting && isPlaying ? undefined : { marginLeft: 3 }}
           />
         </TouchableOpacity>
-        <ToolbarButton
-          icon={bookmark?.page === page ? 'bookmark' : 'bookmark-outline'}
-          label="Signet"
-          color={p.onGreen}
-          onPress={handleBookmarkPress}
-        />
+        <ToolbarButton icon="heart-outline" label="Favoris" color={p.onGreen} onPress={() => navigation.getParent()?.navigate('Favorites')} />
         <ToolbarButton icon="text-outline" label="Affichage" color={p.onGreen} onPress={() => setSettingsOpen(true)} />
       </Animated.View>
 
@@ -551,9 +582,10 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
             { backgroundColor: p.chrome, borderColor: p.goldSoft, top: chromeVisible && topBarHeight ? topBarHeight + 6 : 8 },
           ]}
         >
-          <Ionicons name={isPlaying ? 'volume-medium' : 'volume-mute'} size={13} color={p.title} />
+          <Ionicons name={looping ? 'repeat' : isPlaying ? 'volume-medium' : 'volume-mute'} size={13} color={p.title} />
           <Text style={[styles.nowPlayingText, { color: p.ink }]} numberOfLines={1}>
             {surahNameLatin(playbackSurah!)} · verset {recitedAyah}
+            {looping ? ' · en boucle' : ''}
           </Text>
           <TouchableOpacity onPress={() => goToPage(pageOfVerse(playbackSurah!, recitedAyah!), true)} hitSlop={8}>
             <Ionicons name="locate" size={14} color={p.gold} />
@@ -579,14 +611,26 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route }) => {
                 {sheetVerse.text}
               </Text>
               <View style={styles.sheetActions}>
-                <SheetAction icon="play-circle-outline" label="Écouter ce verset" palette={p} onPress={() => runSheetAction(playSingleVerse)} />
+                <SheetAction icon="play-circle-outline" label="Écouter ce verset" palette={p} onPress={() => runSheetAction((v) => playSingleVerse(v))} />
+                <SheetAction icon="repeat" label="Écouter en boucle" palette={p} onPress={() => runSheetAction((v) => playSingleVerse(v, true))} />
                 <SheetAction
                   icon="play-forward-outline"
                   label="Réciter à partir d'ici"
                   palette={p}
                   onPress={() => runSheetAction((v) => reciteFrom(v.surah, v.ayah))}
                 />
-                <SheetAction icon="bookmark-outline" label="Placer le signet ici" palette={p} onPress={() => runSheetAction(placeBookmark)} />
+                <SheetAction
+                  icon={favoriteKeys.has(verseKey(sheetVerse)) ? 'heart' : 'heart-outline'}
+                  label={favoriteKeys.has(verseKey(sheetVerse)) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  palette={p}
+                  onPress={() => runSheetAction(handleFavorite)}
+                />
+                <SheetAction
+                  icon={bookmark?.surahNumber === sheetVerse.surah && bookmark.verseNumber === sheetVerse.ayah ? 'bookmark' : 'bookmark-outline'}
+                  label={bookmark?.surahNumber === sheetVerse.surah && bookmark.verseNumber === sheetVerse.ayah ? 'Retirer le marque-page' : 'Marque-page ici'}
+                  palette={p}
+                  onPress={() => runSheetAction(handleMarker)}
+                />
                 <SheetAction icon="copy-outline" label="Copier" palette={p} onPress={() => runSheetAction(handleCopy)} />
                 <SheetAction icon="share-social-outline" label="Partager" palette={p} onPress={() => runSheetAction(handleShare)} />
               </View>

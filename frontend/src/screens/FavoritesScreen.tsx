@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,21 +17,15 @@ import {
   toggleFavoriteSurah,
   toggleFavoriteAyah,
 } from '../services/favoritesService';
-import { Surah, Ayah } from '../types/quran';
+import { Surah } from '../types/quran';
 import { SurahCard } from '../components/SurahCard';
-import { VerseModal } from '../components/VerseModal';
-import { playAyahOnly } from '../services/audioService';
-import { getEffectiveAudioUrl } from '../services/downloadService';
-import { FavoritesScreenProps } from '../navigation/types';
+import { FavoritesScreenProps, MushafPlayRequest } from '../navigation/types';
 
 export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) => {
   const { colors, isDark, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<'surahs' | 'ayahs'>('surahs');
   const [favSurahs, setFavSurahs] = useState<Surah[]>([]);
   const [favAyahs, setFavAyahs] = useState<FavoriteAyahItem[]>([]);
-  const [selectedAyah, setSelectedAyah] = useState<Ayah | null>(null);
-  const [selectedSurahName, setSelectedSurahName] = useState<string>('');
-  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
 
   useEffect(() => {
     loadFavorites();
@@ -41,20 +35,48 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
     return () => unsubscribe();
   }, []);
 
+  // Premier chargement : l'onglet Versets s'ouvre d'emblée s'il n'y a que des versets.
+  const firstLoadRef = useRef(true);
+
   const loadFavorites = async () => {
     const s = await getFavoriteSurahs();
     const a = await getFavoriteAyahs();
     setFavSurahs(s);
     setFavAyahs(a);
+    if (firstLoadRef.current && s.length === 0 && a.length > 0) setActiveTab('ayahs');
+    firstLoadRef.current = false;
   };
 
-  const handleSelectSurah = (surah: Surah) => {
-    navigation.navigate('Surah', {
-      surahNumber: surah.number,
-      surahName: surah.name,
-      englishName: surah.englishName,
+  // Une sourate s'ouvre dans le Mushaf, à son premier verset.
+  const handleSelectSurah = (surah: Surah) => openInMushaf(surah.number, 1);
+
+  /**
+   * Ouvre le Mushaf au verset (ou au début de la sourate) et, avec `play`, lance la récitation
+   * là-bas : le verset récité y est surligné, on écoute et on lit en même temps.
+   */
+  const openInMushaf = (surah: number, ayah: number, play?: MushafPlayRequest) => {
+    navigation.navigate('MainTabs', {
+      screen: 'MushafTab',
+      params: { surah, ayah, at: Date.now(), highlight: false, play },
     });
   };
+
+  /** Boutons « Écouter » et « En boucle » d'une sourate ou d'un verset. */
+  const renderPlayButtons = (onPlay: (loop: boolean) => void) => (
+    <View style={styles.playRow}>
+      {([false, true] as const).map((loop) => (
+        <TouchableOpacity
+          key={String(loop)}
+          style={[styles.playBtn, { borderColor: colors.gold }]}
+          onPress={() => onPlay(loop)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name={loop ? 'repeat' : 'play'} size={14} color={colors.gold} />
+          <Text style={[styles.playBtnText, { color: colors.gold }]}>{loop ? 'En boucle' : 'Écouter'}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
   const handleRemoveSurah = async (surah: Surah) => {
     await toggleFavoriteSurah(surah);
@@ -64,17 +86,9 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
     await toggleFavoriteAyah(item);
   };
 
+  // Un verset s'ouvre sur sa page : texte entier, traductions, partage.
   const handleAyahPress = (item: FavoriteAyahItem) => {
-    setSelectedAyah(item.ayah);
-    setSelectedSurahName(item.englishName);
-    setIsModalVisible(true);
-  };
-
-  const handlePlayVerse = async (verse: Ayah) => {
-    const targetItem = favAyahs.find((i) => i.ayah.number === verse.number);
-    if (!targetItem) return;
-    const url = await getEffectiveAudioUrl(targetItem.surahNumber);
-    await playAyahOnly(url, targetItem.surahNumber, verse.numberInSurah);
+    navigation.navigate('Verse', { surah: item.surahNumber, ayah: item.ayah.numberInSurah, title: 'Verset favori' });
   };
 
   return (
@@ -153,16 +167,19 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
           data={favSurahs}
           keyExtractor={(item) => item.number.toString()}
           renderItem={({ item }) => (
-            <View style={styles.cardWrapper}>
-              <View style={{ flex: 1 }}>
-                <SurahCard surah={item} onPress={handleSelectSurah} />
+            <View>
+              <View style={styles.cardWrapper}>
+                <View style={{ flex: 1 }}>
+                  <SurahCard surah={item} onPress={handleSelectSurah} />
+                </View>
+                <TouchableOpacity
+                  style={[styles.removeBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+                  onPress={() => handleRemoveSurah(item)}
+                >
+                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={[styles.removeBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
-                onPress={() => handleRemoveSurah(item)}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-              </TouchableOpacity>
+              <View style={styles.surahPlay}>{renderPlayButtons((loop) => openInMushaf(item.number, 1, loop ? 'surahLoop' : 'surah'))}</View>
             </View>
           )}
           contentContainerStyle={styles.listPadding}
@@ -173,7 +190,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
                 Aucune sourate favorite
               </Text>
               <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                Cliquez sur l'icône cœur pour ajouter des sourates à vos favoris.
+                Dans le Lecteur, touchez le cœur d'une sourate pour l'ajouter ici.
               </Text>
             </View>
           }
@@ -181,7 +198,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
       ) : (
         <FlatList
           data={favAyahs}
-          keyExtractor={(item) => item.ayah.number.toString()}
+          keyExtractor={(item) => `${item.surahNumber}:${item.ayah.numberInSurah}`}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[
@@ -197,7 +214,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
             >
               <View style={styles.ayahHeader}>
                 <Text style={[styles.ayahSurahName, { color: colors.gold }]}>
-                  {item.englishName} - Verset {item.ayah.numberInSurah}
+                  {item.englishName} · verset {item.ayah.numberInSurah}
                 </Text>
                 <TouchableOpacity onPress={() => handleRemoveAyah(item)}>
                   <Ionicons name="close" size={20} color={colors.danger} />
@@ -212,31 +229,23 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
                   {item.ayah.translation}
                 </Text>
               ) : null}
+              {renderPlayButtons((loop) => openInMushaf(item.surahNumber, item.ayah.numberInSurah, loop ? 'verseLoop' : 'verse'))}
             </TouchableOpacity>
           )}
           contentContainerStyle={styles.listPadding}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Ionicons name="bookmark-outline" size={54} color={colors.border} />
+              <Ionicons name="heart-outline" size={54} color={colors.border} />
               <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
                 Aucun verset favori
               </Text>
               <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                Enregistrez des versets depuis la lecture d'une sourate.
+                Dans le Mushaf, touchez un verset puis « Ajouter aux favoris ».
               </Text>
             </View>
           }
         />
       )}
-
-      {/* Pop-up Modal pour le verset */}
-      <VerseModal
-        visible={isModalVisible}
-        ayah={selectedAyah}
-        surahName={selectedSurahName}
-        onClose={() => setIsModalVisible(false)}
-        onPlayVerse={handlePlayVerse}
-      />
     </SafeAreaView>
   );
 };
@@ -335,6 +344,29 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  playRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  playBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  playBtnText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  surahPlay: {
+    paddingHorizontal: 16,
+    marginTop: -4,
+    marginBottom: 10,
   },
   centered: {
     alignItems: 'center',

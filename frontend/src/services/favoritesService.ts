@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Surah, Ayah } from '../types/quran';
 import { ensureWarshNumbering } from './numberingMigration';
+import { getWarshAyahs, surahNameAr, surahNameLatin } from './warshMushafService';
 
 export interface FavoriteAyahItem {
   ayah: Ayah;
@@ -114,4 +115,25 @@ export const toggleFavoriteAyah = async (item: FavoriteAyahItem): Promise<boolea
     console.error('Erreur toggleFavoriteAyah:', e);
     return false;
   }
+};
+
+/** Le verset (numérotation Warsh) est-il dans les favoris ? */
+export const isVerseFavorite = async (surah: number, ayah: number): Promise<boolean> => {
+  const list = await getFavoriteAyahs();
+  return list.some((i) => i.surahNumber === surah && i.ayah.numberInSurah === ayah);
+};
+
+/**
+ * Ajoute ou retire un verset du Mushaf (numérotation Warsh) des favoris. La traduction, si on
+ * l'a, est gardée pour l'afficher dans la liste. Retourne le nouvel état.
+ */
+export const toggleFavoriteVerse = async (surah: number, ayah: number, translation?: string | null): Promise<boolean> => {
+  const warshAyah = getWarshAyahs(surah)[ayah - 1];
+  if (!warshAyah) return false;
+  return toggleFavoriteAyah({
+    ayah: translation ? { ...warshAyah, translation } : warshAyah,
+    surahNumber: surah,
+    surahName: surahNameAr(surah),
+    englishName: surahNameLatin(surah),
+  });
 };

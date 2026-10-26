@@ -16,6 +16,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getSurahList } from '../services/quranService';
 import { getCurrentSurahNumber, playAudioFromAyah, subscribeAudioStatus, togglePlayPause, SoundStatus } from '../services/audioService';
 import { getLastListenPosition } from '../services/bookmarkService';
+import { getFavoriteSurahs, subscribeFavoritesChange, toggleFavoriteSurah } from '../services/favoritesService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
 import { Surah } from '../types/quran';
 import { FullAudioPlayer, RepeatMode } from '../components/FullAudioPlayer';
@@ -32,6 +33,14 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  // Sourates favorites : le cœur de chaque ligne les ajoute ou les retire.
+  const [favorites, setFavorites] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    const load = () => getFavoriteSurahs().then((list) => setFavorites(new Set(list.map((s) => s.number))));
+    load();
+    return subscribeFavoritesChange(load);
+  }, []);
 
   const [audioStatus, setAudioStatus] = useState<SoundStatus>({
     isPlaying: false,
@@ -181,6 +190,18 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
 
         <View style={styles.itemRight}>
           <Text style={[styles.arabicName, { color: colors.gold }]}>{item.name}</Text>
+          <TouchableOpacity
+            accessibilityLabel={favorites.has(item.number) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+            onPress={() => toggleFavoriteSurah(item)}
+            style={styles.playBtnSmall}
+            hitSlop={6}
+          >
+            <Ionicons
+              name={favorites.has(item.number) ? 'heart' : 'heart-outline'}
+              size={22}
+              color={favorites.has(item.number) ? colors.danger : colors.textSecondary}
+            />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => handleRowPress(item)} style={styles.playBtnSmall}>
             <Ionicons
               name={isPlayingThis ? 'pause-circle' : 'play-circle'}

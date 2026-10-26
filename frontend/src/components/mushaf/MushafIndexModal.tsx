@@ -195,7 +195,7 @@ export const MushafIndexModal: React.FC<MushafIndexModalProps> = ({
           <TouchableOpacity style={[styles.bookmarkCard, { backgroundColor: p.green }]} onPress={() => select(bookmark.page)} activeOpacity={0.85}>
             <Ionicons name="bookmark" size={18} color={p.onGreen} />
             <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[styles.bookmarkTitle, { color: p.onGreen }]}>Aller au signet</Text>
+              <Text style={[styles.bookmarkTitle, { color: p.onGreen }]}>Aller au marque-page</Text>
               <Text style={[styles.bookmarkSub, { color: p.onGreen, opacity: 0.75 }]}>
                 {surahNameLatin(bookmark.surahNumber)} · verset {bookmark.verseNumber} · page {bookmark.page}
               </Text>

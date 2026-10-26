@@ -33,6 +33,9 @@ let stopAtSeconds: number | null = null;
 // position donnée avant le chargement et partent du début de la sourate. Tant que la lecture
 // n'y est pas, on l'y replace (voir onPlaybackStatusUpdate).
 let pendingStartSeconds: number | null = null;
+// Écoute en boucle : un verset (de start à end, en secondes) ou la sourate entière (end null).
+// null = pas de boucle.
+let loopRange: { start: number; end: number | null } | null = null;
 
 /**
  * Bornes précises (en secondes) d'un verset au sein du fichier audio de sa sourate,
@@ -133,7 +136,7 @@ export const getCurrentSurahNumber = (): number => surahOfUrl(lastUrl);
 let lastListenSaveAt = 0;
 const trackListening = (positionSec: number) => {
   const surah = surahOfUrl(lastUrl);
-  if (!surah || stopAtSeconds !== null || Date.now() - lastListenSaveAt < 5000) return;
+  if (!surah || stopAtSeconds !== null || loopRange?.end != null || Date.now() - lastListenSaveAt < 5000) return;
   lastListenSaveAt = Date.now();
   saveLastListenPosition(surah, getAyahAtPosition(surah, positionSec) ?? 1);
 };
@@ -234,6 +237,7 @@ const notifyListeners = (status: SoundStatus) => {
  */
 export const playAudioTrack = async (url: string, startRatio: number = 0, startSeconds: number = 0): Promise<boolean> => {
   stopAtSeconds = null; // lecture normale : pas de limite de fin
+  loopRange = null;
   try {
     await stopAudioTrack();
     await initAudioMode();
@@ -288,16 +292,25 @@ export const playAudioFromAyah = (
   return playAudioTrack(url, getAyahStartRatio(surahNumber, numberInSurah, totalAyahsInSurah));
 };
 
+/** Lit toute la sourate en boucle : à la fin, elle reprend du début. */
+export const playSurahLoop = async (url: string): Promise<boolean> => {
+  const ok = await playAudioTrack(url);
+  if (ok) loopRange = { start: 0, end: null };
+  return ok;
+};
+
 /**
  * Joue UN SEUL verset : démarre à son instant de départ précis et se met en pause
  * automatiquement à son instant de fin, sans déborder sur le verset précédent ou suivant.
+ * Avec `loop`, il reprend à son début au lieu de s'arrêter, jusqu'à l'arrêt de la lecture.
  * Retourne true en cas de succès, false si le fichier n'a pas pu être chargé ou si aucune
  * donnée de minutage n'est disponible pour ce verset.
  */
 export const playAyahOnly = async (
   url: string,
   surahNumber: number,
-  numberInSurah: number
+  numberInSurah: number,
+  loop: boolean = false
 ): Promise<boolean> => {
   const bounds = getAyahBoundsSeconds(surahNumber, numberInSurah);
   if (!bounds) {
@@ -317,7 +330,8 @@ export const playAyahOnly = async (
     );
 
     currentSound = sound;
-    stopAtSeconds = bounds.endSec;
+    stopAtSeconds = loop ? null : bounds.endSec;
+    loopRange = loop ? { start: bounds.startSec, end: bounds.endSec } : null;
     pendingStartSeconds = bounds.startSec > 1 ? bounds.startSec : null;
     lastUrl = url;
     showNowPlaying(url);
@@ -394,6 +408,12 @@ const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
       return;
     }
 
+    // Verset en boucle : arrivé à sa fin, on revient à son début.
+    if (loopRange?.end != null && isPlaying && positionSec >= loopRange.end) {
+      currentSound?.setPositionAsync(loopRange.start * 1000).catch(() => {});
+      return;
+    }
+
     if (isPlaying) trackListening(positionSec);
 
     notifyListeners({
@@ -402,6 +422,13 @@ const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
       duration: (status.durationMillis || 0) / 1000,
       isLoaded: true,
     });
+
+    if (status.didJustFinish && loopRange) {
+      // Sourate en boucle (ou verset final, dont la fin est celle du fichier) : on recommence.
+      const start = loopRange.start * 1000;
+      currentSound?.setPositionAsync(start).then(() => currentSound?.playAsync()).catch(() => {});
+      return;
+    }
 
     if (status.didJustFinish && !status.isLooping) {
       const finished = currentSound;
@@ -453,6 +480,7 @@ export const togglePlayPause = async (): Promise<void> => {
 export const seekBy = async (secondsDelta: number): Promise<void> => {
   if (!currentSound) return;
   stopAtSeconds = null; // un seek manuel sort du mode "verset unique"
+  if (loopRange?.end != null) loopRange = null; // ... et de la boucle sur un verset
   pendingStartSeconds = null;
   try {
     const status = await currentSound.getStatusAsync();
@@ -471,6 +499,7 @@ export const seekBy = async (secondsDelta: number): Promise<void> => {
 export const seekToPosition = async (seconds: number): Promise<void> => {
   if (!currentSound) return;
   stopAtSeconds = null; // un seek manuel sort du mode "verset unique"
+  if (loopRange?.end != null) loopRange = null; // ... et de la boucle sur un verset
   pendingStartSeconds = null;
   try {
     const status = await currentSound.getStatusAsync();
@@ -500,6 +529,7 @@ export const setPlaybackRate = async (rate: number): Promise<void> => {
  */
 export const stopAudioTrack = async (): Promise<void> => {
   stopAtSeconds = null;
+  loopRange = null;
   pendingStartSeconds = null;
   if (currentSound) {
     try {
