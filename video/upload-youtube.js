@@ -3,6 +3,7 @@
  *
  *   node upload-youtube.js setup       autorise l'accès à la chaîne et crée les playlists (une seule fois)
  *   node upload-youtube.js long|shorts [--start AAAA-MM-JJ] [--hours 18] [--limit 6]
+ *   node upload-youtube.js installer   clips d'installation (installer.js), chacun à sa date
  *
  * --start   premier jour de publication (demain par défaut)
  * --hours   heures de publication dans la journée, ex. "12,19" pour deux vidéos par jour
@@ -33,7 +34,9 @@ const TOKEN_FILE = path.join(SECRETS_DIR, 'token.json');
 const OUT_DIR = path.join(__dirname, 'out');
 const STATE_FILE = path.join(OUT_DIR, 'youtube-uploaded.json');
 const SCOPES = ['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube'];
-const SOURCES = { long: path.join(OUT_DIR, 'youtube'), shorts: path.join(OUT_DIR, 'shorts') };
+const SOURCES = { long: path.join(OUT_DIR, 'youtube'), shorts: path.join(OUT_DIR, 'shorts'), installer: path.join(OUT_DIR, 'installer') };
+// Les clips d'installation (installer.js) ont leur propre date ; ils partent au plus une semaine avant.
+const INSTALLER_AHEAD_MS = 8 * 86400000;
 const PLAYLISTS_FILE = path.join(OUT_DIR, 'youtube-playlists.json');
 const PLAYLISTS = {
   complete: { title: 'Coran complet en Warsh · Serigne Aboul Baraka Mbacké', description: 'Les 114 sourates, récitées en riwaya Warsh, avec le texte du Mushaf et la traduction française.' },
@@ -112,7 +115,7 @@ async function ensurePlaylists(youtube) {
 }
 
 function playlistsFor(kind, file, ids) {
-  if (kind === 'shorts') return [ids.shorts];
+  if (kind !== 'long') return [ids.shorts];
   return Number(file.slice(0, 3)) >= 78 ? [ids.complete, ids.amma] : [ids.complete];
 }
 
@@ -126,7 +129,7 @@ async function main() {
     return;
   }
   if (!SOURCES[kind]) {
-    console.log('Usage : node upload-youtube.js setup | long|shorts [--start AAAA-MM-JJ] [--hours 18] [--limit 6]');
+    console.log('Usage : node upload-youtube.js setup | long|shorts|installer [--start AAAA-MM-JJ] [--hours 18] [--limit 6]');
     process.exit(1);
   }
   const tomorrow = new Date(Date.now() + 86400000);
@@ -140,8 +143,15 @@ async function main() {
   const todo = (fs.existsSync(SOURCES[kind]) ? fs.readdirSync(SOURCES[kind]) : [])
     // Une vidéo n'est prête que si son .json existe (écrit en dernier par render.js).
     .filter((f) => f.endsWith('.mp4') && !f.endsWith('.partiel.mp4') && !state[f] && fs.existsSync(path.join(SOURCES[kind], f.replace(/\.mp4$/, '.json'))))
+    .filter((f) => {
+      if (kind !== 'installer') return true;
+      const at = Date.parse(JSON.parse(fs.readFileSync(path.join(SOURCES[kind], f.replace(/\.mp4$/, '.json')), 'utf8')).publishAt);
+      return at > Date.now() + 3600000 && at < Date.now() + INSTALLER_AHEAD_MS;
+    })
     .sort();
-  if (!todo.length) return console.log('Rien à envoyer : toutes les vidéos de ce dossier sont déjà sur YouTube.');
+  if (!todo.length) {
+    return console.log(kind === 'installer' ? "Aucun clip d'installation à programmer cette semaine." : 'Rien à envoyer : toutes les vidéos de ce dossier sont déjà sur YouTube.');
+  }
 
   const youtube = google.youtube({ version: 'v3', auth: await authorize() });
   const playlists = await ensurePlaylists(youtube);
@@ -151,7 +161,7 @@ async function main() {
   while (slotDate(start, hours, slot).getTime() <= after) slot++;
   for (const file of todo.slice(0, limit)) {
     const meta = JSON.parse(fs.readFileSync(path.join(SOURCES[kind], file.replace(/\.mp4$/, '.json')), 'utf8'));
-    const publishAt = now ? new Date() : slotDate(start, hours, slot);
+    const publishAt = now ? new Date() : meta.publishAt ? new Date(meta.publishAt) : slotDate(start, hours, slot);
 
     process.stdout.write(`${file} → ${publishAt.toLocaleString('fr-FR')} … `);
     try {

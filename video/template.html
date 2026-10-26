@@ -38,6 +38,14 @@
   .basmala { font: 96px Warsh; direction: rtl; color: var(--ink); }
   .big { font: 700 64px var(--latin); color: var(--title); text-align: center; }
   .sub { font: 40px var(--latin); color: var(--muted); text-align: center; line-height: 1.4; white-space: pre-line; }
+  .badge { padding: 8px 28px; border-radius: 40px; background: var(--gold); color: #fff; font: 700 30px var(--latin); letter-spacing: 4px; }
+  .steps { list-style: none; width: 100%; display: flex; flex-direction: column; gap: 34px; margin-top: 30px; }
+  .steps li { display: flex; align-items: center; gap: 30px; padding: 30px 34px; border-radius: 30px; background: #fff; border: 3px solid var(--gold-soft); }
+  .steps .num { flex: none; width: 76px; height: 76px; border-radius: 50%; background: var(--green); color: var(--on-green); font: 700 40px/76px var(--latin); text-align: center; }
+  .steps b { display: block; font: 700 44px var(--latin); color: var(--ink); }
+  .steps span.detail { font: 34px var(--latin); color: var(--muted); }
+  .hero { width: 300px; height: 300px; border-radius: 50%; margin-bottom: 30px; }
+  .pill { margin-top: 36px; padding: 18px 44px; border-radius: 60px; background: var(--gold-soft); font: 700 44px var(--latin); color: var(--green-deep); }
   .foot { text-align: center; }
   .foot .rule { width: 240px; height: 2px; background: var(--gold-soft); margin: 0 auto 14px; }
   .foot .reciter { font: 28px var(--latin); color: var(--ink); }
@@ -62,6 +70,12 @@
     } else if (s.kind === 'intro') {
       body = (s.basmala ? `<div class="basmala">${esc(s.basmala)}</div>` : '') +
         `<div class="big">${esc(s.title)}</div><div class="sub">${esc(s.subtitle)}</div>`;
+    } else if (s.kind === 'steps') {
+      body = `<div class="badge">${esc(s.badge)}</div><div class="big" style="margin-top:24px">${esc(s.title)}</div><ol class="steps">` +
+        s.steps.map(([t, d], i) => `<li><div class="num">${i + 1}</div><div><b>${esc(t)}</b><span class="detail">${esc(d)}</span></div></li>`).join('') + '</ol>';
+    } else if (s.kind === 'card') {
+      body = `<img class="hero" src="__APP_ICON__" alt=""><div class="big">${esc(s.title)}</div><div class="sub">${esc(s.subtitle)}</div>` +
+        (s.pill ? `<div class="pill">${esc(s.pill)}</div>` : '');
     } else {
       body = `<div class="big">${esc(s.title)}</div><div class="sub">${esc(s.subtitle)}</div>`;
     }

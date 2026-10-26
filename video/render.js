@@ -177,7 +177,7 @@ async function ayahScreens(renderer, base, verse, fr, dir, parts = 1) {
 }
 
 /** Assemble les images (avec leur durée) et l'extrait audio [from, to] en MP4. */
-async function encode(frames, audioFile, from, to, outFile, outroSec) {
+async function encode(frames, audioFile, from, to, outFile, outroSec, fadeSec = 0) {
   const list = path.join(path.dirname(frames[0].file), 'frames.txt');
   const lines = frames.flatMap((f) => [`file '${f.file.replace(/\\/g, '/')}'`, `duration ${f.duration.toFixed(3)}`]);
   lines.push(`file '${frames[frames.length - 1].file.replace(/\\/g, '/')}'`);
@@ -191,7 +191,7 @@ async function encode(frames, audioFile, from, to, outFile, outroSec) {
     '-ss', from.toFixed(3), '-to', to.toFixed(3), '-i', audioFile,
     '-map', '0:v', '-map', '1:a',
     '-vf', `fps=${FPS},format=yuv420p`, '-c:v', 'libx264', '-tune', 'stillimage', '-preset', 'veryfast', '-crf', '20',
-    '-af', `apad=whole_dur=${total.toFixed(3)}`, '-c:a', 'aac', '-b:a', '192k',
+    '-af', `apad=whole_dur=${total.toFixed(3)}` + (fadeSec ? `,afade=t=out:st=${(total - fadeSec).toFixed(3)}:d=${fadeSec}` : ''), '-c:a', 'aac', '-b:a', '192k',
     '-t', total.toFixed(3), '-movflags', '+faststart', partial,
   ]);
   fs.renameSync(partial, outFile);
@@ -376,4 +376,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { FORMATS, Renderer, ayahScreens, versesOf, frenchOf };
+module.exports = {
+  FORMATS, Renderer, ayahScreens, versesOf, frenchOf, segmentsOf, encode,
+  MUSHAF, AUDIO_DIR, CACHE_DIR, OUT_DIR, SITE, HASHTAGS, pad, slug, surahNameAr, surahNameLatin,
+};

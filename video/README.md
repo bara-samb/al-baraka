@@ -105,6 +105,24 @@ légende de chaque clip. Ensuite, sur **TikTok Studio** dans le navigateur
 
 Les mêmes clips servent pour les **YouTube Shorts**.
 
+## 4. Clips d'installation (un par semaine)
+
+Sur TikTok, le clip qui montre comment installer l'appli est celui qui a eu le plus de
+réactions. `installer.js` en fabrique un par vendredi : le verset du jour de l'application
+(texte Warsh et traduction, pendant sa récitation), puis les gestes pour installer AL BARAKA sur
+Android et sur iPhone, pendant que la récitation continue. Un verset de plus de 30 s est remplacé
+par le suivant de la liste.
+
+```bash
+node installer.js                          # les 8 prochains vendredis
+node installer.js --start 2026-11-06 --weeks 12
+```
+
+Les clips arrivent dans `out/installer/`, avec la date de publication (vendredi, 14 h) dans
+leur `.json`. `publier.cmd` les envoie sur YouTube une semaine à l'avance, programmés à leur
+date (`node upload-youtube.js installer`), et `plan.js` les ajoute au calendrier TikTok. Comme
+les autres clips, regardez-les avant de les publier.
+
 ## Rappels
 
 - Ne publiez qu'avec **l'accord écrit** de Serigne Aboul Baraka Mbacké ou de sa famille,
