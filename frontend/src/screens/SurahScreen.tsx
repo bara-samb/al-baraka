@@ -131,7 +131,7 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
         setIsDownloaded(true);
         showAlert('Succès', `La Sourate ${englishName} est désormais disponible hors-ligne !`);
       } else {
-        showAlert('Erreur', 'Impossible de télécharger le fichier audio. Vérifiez le serveur backend.');
+        showAlert('Erreur', "Impossible de télécharger l'audio. Vérifiez votre connexion et l'espace libre du téléphone.");
       }
     }
   };

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { View, ActivityIndicator } from 'react-native';
+import { ensureOfflineTranslation } from './src/services/quranService';
 
 export default function App() {
   // Police officielle du Complexe du Roi Fahd pour le texte Warsh (warshData_v10), voir
@@ -11,6 +12,13 @@ export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     'KFGQPC_Warsh': require('./assets/fonts/KFGQPC_Warsh.ttf'),
   });
+
+  // Traduction française gardée sur l'appareil pour le hors-ligne : téléchargée une fois, en
+  // tâche de fond, quelques secondes après l'ouverture pour ne pas ralentir le démarrage.
+  useEffect(() => {
+    const timer = setTimeout(() => ensureOfflineTranslation('fr'), 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (!fontsLoaded && !fontError) {
     return (

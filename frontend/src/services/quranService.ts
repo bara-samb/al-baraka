@@ -3,6 +3,7 @@ import { ApiResponse, Ayah, Surah, SurahDetail, SearchOccurrenceStats, SearchOcc
 import {
   MUSHAF_VERSES,
   WARSH_BASMALA,
+  getMushafVerse,
   getWarshAyahs,
   hafsToWarsh,
   surahNameAr,
@@ -29,6 +30,66 @@ export const shouldShowBasmalaHeader = (surahNumber: number): boolean => surahNu
 // In-Memory Cache pour des performances ultra-rapides
 let cachedSurahList: Surah[] | null = null;
 const cachedSurahDetailsMap = new Map<string, SurahDetail>();
+
+/** Vrai si le navigateur se sait hors ligne : inutile alors d'attendre le réseau. */
+const isOffline = (): boolean => typeof navigator !== 'undefined' && navigator.onLine === false;
+
+/**
+ * fetch abandonné au bout de `ms` millisecondes : avec une connexion très faible, l'app
+ * retombe vite sur le hors-ligne au lieu de rester bloquée sur un chargement.
+ */
+const fetchWithTimeout = async (url: string, ms = 6000): Promise<Response> => {
+  if (isOffline()) throw new Error('Hors ligne');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+// Traduction complète du Coran gardée sur l'appareil (téléchargée une fois, ~400 Ko) :
+// sourates, partage et recherche en français fonctionnent alors hors ligne et sans attente.
+// Pour chaque sourate, les versets numérotés à la Hafs (index 0 = sourate 1).
+type TranslationStore = string[][];
+const STORE_KEY = (lang: 'fr' | 'en') => `@albaraka_translation_${lang}`;
+const EDITION = { fr: 'fr.hamidullah', en: 'en.sahih' } as const;
+const translationStores = new Map<'fr' | 'en', Promise<TranslationStore | null>>();
+
+const loadTranslationStore = (lang: 'fr' | 'en'): Promise<TranslationStore | null> => {
+  let pending = translationStores.get(lang);
+  if (!pending) {
+    pending = AsyncStorage.getItem(STORE_KEY(lang))
+      .then((raw) => (raw ? (JSON.parse(raw) as TranslationStore) : null))
+      .catch(() => null);
+    translationStores.set(lang, pending);
+  }
+  return pending;
+};
+
+/**
+ * Télécharge et garde la traduction complète si elle manque. Appelé au démarrage, en tâche
+ * de fond ; sans effet hors ligne (nouvel essai au prochain lancement).
+ */
+export const ensureOfflineTranslation = async (lang: 'fr' | 'en' = 'fr'): Promise<void> => {
+  if (await loadTranslationStore(lang)) return;
+  try {
+    const response = await fetchWithTimeout(`${BASE_URL}/quran/${EDITION[lang]}`, 60000);
+    if (!response.ok) return;
+    const json: ApiResponse<{ surahs: { ayahs: { text: string }[] }[] }> = await response.json();
+    const store: TranslationStore = json.data.surahs.map((s) => s.ayahs.map((a) => a.text));
+    if (store.length !== 114) return;
+    // Les anciens caches sourate par sourate (texte arabe compris) deviennent inutiles :
+    // ils sont retirés pour laisser la place (stockage du navigateur limité).
+    const keys = await AsyncStorage.getAllKeys();
+    await AsyncStorage.multiRemove(keys.filter((k) => k.startsWith(`@albaraka_surah_warsh_v3_`) && k.endsWith(`_${lang}`)));
+    await AsyncStorage.setItem(STORE_KEY(lang), JSON.stringify(store));
+    translationStores.set(lang, Promise.resolve(store));
+  } catch (e) {
+    console.warn(`ensureOfflineTranslation(${lang}) : non téléchargée pour l'instant.`, e);
+  }
+};
 
 /** Remplace le nombre de versets (Hafs côté API) par celui du Mushaf Warsh. */
 const withWarshCounts = (list: Surah[]): Surah[] => list.map((s) => ({ ...s, numberOfAyahs: surahVerseCount(s.number) }));
@@ -63,7 +124,7 @@ export const getSurahList = async (): Promise<Surah[]> => {
   }
 
   try {
-    const response = await fetch(`${BASE_URL}/surah`);
+    const response = await fetchWithTimeout(`${BASE_URL}/surah`);
     if (!response.ok) {
       throw new Error(`Erreur lors de la récupération des sourates: ${response.status}`);
     }
@@ -117,6 +178,20 @@ export const getSurahDetails = async (
     return cachedSurahDetailsMap.get(cacheKey)!;
   }
 
+  // Traduction complète déjà sur l'appareil : rien à télécharger.
+  const store = await loadTranslationStore(lang);
+  if (store?.[surahNumber - 1]) {
+    const warsh = getWarshAyahs(surahNumber);
+    const meta = (await getSurahList()).find((s) => s.number === surahNumber) ?? offlineSurahList()[surahNumber - 1];
+    const result: SurahDetail = {
+      ...meta,
+      numberOfAyahs: warsh.length,
+      ayahs: attachTranslations(surahNumber, warsh, store[surahNumber - 1]),
+    };
+    cachedSurahDetailsMap.set(cacheKey, result);
+    return result;
+  }
+
   try {
     const local = await AsyncStorage.getItem(`@albaraka_surah_${cacheKey}`);
     if (local) {
@@ -131,7 +206,7 @@ export const getSurahDetails = async (
   const warshAyahs = getWarshAyahs(surahNumber);
   try {
     const translationEdition = lang === 'en' ? 'en.sahih' : 'fr.hamidullah';
-    const response = await fetch(`${BASE_URL}/surah/${surahNumber}/${translationEdition}`);
+    const response = await fetchWithTimeout(`${BASE_URL}/surah/${surahNumber}/${translationEdition}`);
     if (!response.ok) {
       throw new Error(`Erreur lors de la récupération de la sourate ${surahNumber}: ${response.status}`);
     }
@@ -168,6 +243,40 @@ const normalizeArabic = (text: string): string =>
     .replace(/\u0649/g, '\u064A')
     .replace(/\u0629/g, '\u0647');
 
+// Texte Warsh normalisé, calculé à la première recherche puis réutilisé.
+let normalizedVerses: string[] | null = null;
+
+/** Minuscules sans accents, pour une recherche française tolérante. */
+const normalizeLatin = (text: string): string => text.normalize('NFD').replace(/\p{Mn}/gu, '').toLowerCase();
+
+/**
+ * Recherche dans la traduction gardée sur l'appareil (hors ligne, instantanée). Les versets
+ * trouvés (numérotés à la Hafs) sont présentés avec le texte Warsh qui les contient.
+ */
+const searchTranslationLocally = async (query: string, store: TranslationStore): Promise<SearchOccurrenceStats> => {
+  const needle = normalizeLatin(query);
+  const surahMap = new Map((await getSurahList()).map((s) => [s.number, s]));
+  const results: SearchOccurrenceItem[] = [];
+  const uniqueSurahs = new Set<number>();
+  store.forEach((ayahs, i) => {
+    const surah = i + 1;
+    ayahs.forEach((translation, j) => {
+      if (!normalizeLatin(translation).includes(needle)) return;
+      const ayah = hafsToWarsh(surah, j + 1);
+      uniqueSurahs.add(surah);
+      results.push({
+        surahNumber: surah,
+        surahName: surahMap.get(surah)?.name || '',
+        englishName: surahMap.get(surah)?.englishName || '',
+        numberInSurah: ayah,
+        text: getMushafVerse(surah, ayah)?.text || '',
+        translation,
+      });
+    });
+  });
+  return { query, totalOccurrences: results.length, totalSurahs: uniqueSurahs.size, results };
+};
+
 /**
  * Recherche locale dans le texte Warsh embarqu\u00E9 (aucune \u00E9dition "ar.warsh" n'existe c\u00F4t\u00E9 API).
  */
@@ -179,8 +288,10 @@ const searchArabicLocally = async (query: string): Promise<SearchOccurrenceStats
   const results: SearchOccurrenceItem[] = [];
   const uniqueSurahs = new Set<number>();
 
-  MUSHAF_VERSES.forEach((verse) => {
-    if (!normalizeArabic(verse.text).includes(normalizedQuery)) return;
+  normalizedVerses ??= MUSHAF_VERSES.map((v) => normalizeArabic(v.text));
+  const texts = normalizedVerses;
+  MUSHAF_VERSES.forEach((verse, i) => {
+    if (!texts[i].includes(normalizedQuery)) return;
     const surahInfo = surahMap.get(verse.surah);
     uniqueSurahs.add(verse.surah);
     results.push({
@@ -221,10 +332,15 @@ export const searchQuranOccurrences = async (query: string): Promise<SearchOccur
     return searchArabicLocally(trimmed);
   }
 
+  const store = await loadTranslationStore('fr');
+  if (store) {
+    return searchTranslationLocally(trimmed, store);
+  }
+
   try {
-    const response = await fetch(`${BASE_URL}/search/${encodeURIComponent(trimmed)}/all/fr.hamidullah`);
+    const response = await fetchWithTimeout(`${BASE_URL}/search/${encodeURIComponent(trimmed)}/all/fr.hamidullah`);
     if (!response.ok) {
-      const fallbackResp = await fetch(`${BASE_URL}/search/${encodeURIComponent(trimmed)}/all/en.sahih`);
+      const fallbackResp = await fetchWithTimeout(`${BASE_URL}/search/${encodeURIComponent(trimmed)}/all/en.sahih`);
       if (!fallbackResp.ok) {
         return { query: trimmed, totalOccurrences: 0, totalSurahs: 0, results: [] };
       }
@@ -281,10 +397,13 @@ const formatSearchResults = (query: string, data: any): SearchOccurrenceStats =>
  */
 export const getFrenchVerseTranslation = async (surahNumber: number, warshAyah: number): Promise<string | null> => {
   const [first, last] = warshToHafs(surahNumber, warshAyah);
+  const store = await loadTranslationStore('fr');
+  const stored = store?.[surahNumber - 1]?.slice(first - 1, last);
+  if (stored?.length) return stored.join(' ');
   try {
     const parts = await Promise.all(
       Array.from({ length: last - first + 1 }, (_, i) =>
-        fetch(`${BASE_URL}/ayah/${surahNumber}:${first + i}/fr.hamidullah`)
+        fetchWithTimeout(`${BASE_URL}/ayah/${surahNumber}:${first + i}/fr.hamidullah`)
           .then((r) => r.json())
           .then((json: ApiResponse<{ text: string }>) => json.data.text)
       )
