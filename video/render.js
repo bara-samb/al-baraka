@@ -3,6 +3,7 @@
  *
  *   node render.js long <sourates>     vidéos YouTube 16:9, une par sourate
  *   node render.js shorts <sourates>   clips verticaux 9:16 (YouTube Shorts, TikTok), quelques versets chacun
+ *   node render.js combo 108,103 112-114   un clip vertical par groupe de sourates courtes (out/regroupes/)
  *
  * <sourates> : "1", "1-10", "78-114" ou "all".
  * Options : --max <s> durée maximale d'un clip (60 par défaut), --no-fr sans traduction française.
@@ -334,6 +335,66 @@ async function renderShorts(renderer, surah, { withFr, maxSec }) {
   }
 }
 
+/**
+ * Clip vertical regroupant plusieurs sourates courtes, à la suite (ex. Al-Ikhlāṣ, Al-Falaq et
+ * An-Nās) : seules, elles font des clips de 15 à 25 s que TikTok montre peu. Chaque sourate est
+ * encodée à part (son MP3, sans la basmala, comme les clips d'une sourate), puis les morceaux sont
+ * mis bout à bout. Les clips arrivent dans out/regroupes/ : ils ne partent pas dans la file des
+ * Shorts YouTube, qui contient déjà ces sourates une par une.
+ */
+async function renderCombo(renderer, surahs, { withFr }) {
+  const latins = surahs.map(surahNameLatin);
+  const name = `${surahs.map(pad).join('-')}-${surahs.map((s) => slug(surahNameLatin(s))).join('-')}`;
+  const outDir = path.join(OUT_DIR, 'regroupes');
+  const out = path.join(outDir, `${name}.mp4`);
+  if (fs.existsSync(out)) return console.log(`  déjà fait : ${name}.mp4`);
+  const dir = path.join(CACHE_DIR, 'frames', `combo-${name}`);
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(outDir, { recursive: true });
+
+  const parts = [];
+  for (const [i, surah] of surahs.entries()) {
+    const segments = await segmentsOf(surah, versesOf(surah));
+    const fr = withFr ? await frenchOf(surah) : [];
+    const surahDir = path.join(dir, pad(surah));
+    fs.mkdirSync(surahDir, { recursive: true });
+    const frames = [];
+    for (const seg of segments) {
+      frames.push(...await ayahScreens(renderer, { surahAr: surahNameAr(surah), ref: `${surahNameLatin(surah)} · verset ${seg.ayah}` }, seg, fr[seg.ayah - 1], surahDir));
+    }
+    const last = i === surahs.length - 1;
+    if (last) {
+      await renderer.shot({ kind: 'outro', title: 'AL BARAKA', subtitle: `Le Coran en Warsh, verset par verset\n${SITE}`, force: true }, path.join(surahDir, 'outro.png'));
+      frames.push({ file: path.join(surahDir, 'outro.png'), duration: 2 });
+    }
+    const part = path.join(dir, `${pad(surah)}.mp4`);
+    await encode(frames, path.join(AUDIO_DIR, `${pad(surah)}.mp3`), segments[0].start, segments[segments.length - 1].end, part, last ? 2 : 0);
+    parts.push(part);
+  }
+
+  // Morceaux encodés pareil (images, son) : ils se mettent bout à bout sans réencodage.
+  const list = path.join(dir, 'parts.txt');
+  fs.writeFileSync(list, parts.map((p) => `file '${p.replace(/\\/g, '/')}'`).join('\n'));
+  const partial = out.replace(/\.mp4$/, '.partiel.mp4');
+  await run(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', partial]);
+  fs.renameSync(partial, out);
+
+  const title = latins.length > 1 ? `${latins.slice(0, -1).join(', ')} et ${latins[latins.length - 1]}` : latins[0];
+  const caption = `${title} · ${surahs.map(surahNameAr).join(' · ')}\nRécitation Warsh de Serigne Aboul Baraka Mbacké\n📖 Application gratuite : ${SITE}`;
+  const meta = {
+    title: `${title} | Serigne Aboul Baraka Mbacké #Shorts`.slice(0, 100),
+    description: `${caption}\n\n${HASHTAGS.join(' ')} #Shorts`,
+    tags: ['Coran', 'Quran', 'Warsh', 'Serigne Aboul Baraka Mbacké', 'AL BARAKA', ...latins.map((l) => `Sourate ${l}`)],
+    categoryId: '22',
+    tiktokCaption: `${caption}\n\n${HASHTAGS.join(' ')} #fyp`,
+  };
+  fs.writeFileSync(out.replace(/\.mp4$/, '.json'), JSON.stringify(meta, null, 2));
+  fs.writeFileSync(out.replace(/\.mp4$/, '.txt'), meta.tiktokCaption);
+  fs.rmSync(dir, { recursive: true, force: true });
+  console.log(`  ✓ ${name}.mp4`);
+}
+
 function parseSurahs(arg) {
   if (!arg || arg === 'all') return Array.from({ length: 114 }, (_, i) => i + 1);
   return arg.split(',').flatMap((part) => {
@@ -345,8 +406,27 @@ function parseSurahs(arg) {
 
 async function main() {
   const [mode, list, ...rest] = process.argv.slice(2);
+  if (mode === 'combo') {
+    // node render.js combo 108,103 112,113,114 : un clip par groupe de sourates.
+    const groups = [list, ...rest.filter((a) => !a.startsWith('--'))].filter(Boolean).map(parseSurahs);
+    const renderer = new Renderer();
+    await renderer.open(FORMATS.shorts);
+    try {
+      for (const group of groups) {
+        console.log(`[${group.map(pad).join('+')}] ${group.map(surahNameLatin).join(' + ')}`);
+        try {
+          await renderCombo(renderer, group, { withFr: !rest.includes('--no-fr') });
+        } catch (err) {
+          console.error(`  ✗ ${err.message}`);
+        }
+      }
+    } finally {
+      await renderer.close();
+    }
+    return;
+  }
   if (!FORMATS[mode]) {
-    console.log('Usage : node render.js long|shorts <sourates> [--max 60] [--no-fr]');
+    console.log('Usage : node render.js long|shorts <sourates> [--max 60] [--no-fr]\n        node render.js combo <sourates> [<sourates>…]   ex. combo 108,103 112-114');
     process.exit(1);
   }
   const maxIdx = rest.indexOf('--max');

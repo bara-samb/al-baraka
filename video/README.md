@@ -31,7 +31,13 @@ node render.js long 78-114       # tout le Juz' Amma
 node render.js long all          # les 114 sourates (plusieurs heures)
 node render.js shorts 112-114    # clips verticaux des trois dernières sourates
 node render.js shorts 36 --max 45   # Ya-Sin en clips de 45 s au plus
+node render.js combo 108,103 112-114   # sourates courtes regroupées, un clip par groupe
 ```
+
+Les sourates très courtes font seules des clips de 15 à 25 s, que TikTok montre peu (les
+spectateurs partent avant d'être retenus). `combo` les met bout à bout dans un seul clip, rangé
+dans `out/regroupes/` avec sa légende : il est à publier sur TikTok à la main, et ne part pas dans
+la file des Shorts YouTube (qui a déjà ces sourates une par une).
 
 Option `--no-fr` : sans la traduction française.
 
