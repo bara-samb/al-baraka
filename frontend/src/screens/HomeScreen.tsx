@@ -219,16 +219,14 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
         >
           <View style={styles.sadaqahHead}>
             <MaterialCommunityIcons name="hand-heart" size={20} color={colors.accentText} />
-            <Text style={[styles.sadaqahLabel, { color: colors.accentText }]}>SADAQAH · SARAX</Text>
+            <Text style={[styles.sadaqahLabel, { color: colors.accentText }]}>SADAQAH</Text>
           </View>
           <Text style={[styles.sadaqahTitle, { color: colors.accentText }]}>Soutenez AL BARAKA</Text>
           <Text style={[styles.sadaqahBody, { color: colors.accentText }]}>
-            L'application est gratuite et sans publicité. Votre sadaqah paie l'hébergement des récitations de
-            Serigne Aboul Baraka Mbacké et permet de les faire écouter à tous. Même un petit don compte.
+            L'application est gratuite et sans publicité.
           </Text>
           <Text style={[styles.sadaqahWolof, { color: colors.accentSub }]}>
-            Jàppaleel AL BARAKA. Aplikasioŋ bi amul fay, amul pub. Sa ndimbal dina dimbali ngir jàngum
-            Serigne Aboul Baraka Mbacké agsi ci ñépp. Sarax su tuuti sax am na njariñ.
+            Jàppaleel AL BARAKA. Aplikasioŋ bi amul fay, amul pub.
           </Text>
           <View style={styles.sadaqahFoot}>
             <PaymentBadges color={colors.accentText} />
