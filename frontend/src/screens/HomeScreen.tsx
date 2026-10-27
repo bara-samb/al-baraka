@@ -231,6 +231,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
           <View style={styles.sadaqahFoot}>
             <PaymentBadges color={colors.accentText} />
             <View style={[styles.sadaqahBtn, { backgroundColor: colors.gold }]}>
+              <MaterialCommunityIcons name="hand-heart" size={18} color={colors.onGold} />
               <Text style={[styles.sadaqahBtnText, { color: colors.onGold }]}>Faire un don</Text>
             </View>
           </View>
@@ -424,21 +425,21 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: 'italic',
   },
+  // Logos puis bouton pleine largeur : la même mise en page sur tous les téléphones.
   sadaqahFoot: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
     marginTop: 14,
   },
   sadaqahBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 11,
+    borderRadius: 22,
   },
   sadaqahBtnText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: 'bold',
   },
 });
