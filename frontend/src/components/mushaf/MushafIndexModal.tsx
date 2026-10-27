@@ -26,6 +26,9 @@ interface MushafIndexModalProps {
   bookmark: MushafBookmark | null;
   revelationTypes: Record<number, 'Meccan' | 'Medinan'>;
   palette: MushafPalette;
+  /** Sourates favorites : un cœur à côté du nom les ajoute ou les retire. */
+  favoriteSurahs: Set<number>;
+  onToggleFavoriteSurah: (surah: number) => void;
   onClose: () => void;
   onSelectPage: (page: number) => void;
 }
@@ -51,6 +54,8 @@ export const MushafIndexModal: React.FC<MushafIndexModalProps> = ({
   bookmark,
   revelationTypes,
   palette: p,
+  favoriteSurahs,
+  onToggleFavoriteSurah,
   onClose,
   onSelectPage,
 }) => {
@@ -96,7 +101,21 @@ export const MushafIndexModal: React.FC<MushafIndexModalProps> = ({
       >
         <AyahRosette number={item.number} size={38} palette={p} />
         <View style={styles.surahInfo}>
-          <Text style={[styles.surahLatin, { color: p.ink }]}>{item.nameLatin}</Text>
+          <View style={styles.surahNameRow}>
+            <Text style={[styles.surahLatin, { color: p.ink }]}>{item.nameLatin}</Text>
+            <TouchableOpacity
+              accessibilityLabel={favoriteSurahs.has(item.number) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+              onPress={() => onToggleFavoriteSurah(item.number)}
+              hitSlop={10}
+              style={styles.surahHeart}
+            >
+              <Ionicons
+                name={favoriteSurahs.has(item.number) ? 'heart' : 'heart-outline'}
+                size={17}
+                color={favoriteSurahs.has(item.number) ? p.gold : p.muted}
+              />
+            </TouchableOpacity>
+          </View>
           <View style={styles.surahMetaRow}>
             <MaterialCommunityIcons name={meccan ? 'cube' : 'mosque'} size={12} color={p.gold} style={{ marginRight: 4 }} />
             <Text style={[styles.surahMeta, { color: p.muted }]}>
@@ -230,6 +249,7 @@ export const MushafIndexModal: React.FC<MushafIndexModalProps> = ({
               data={filteredSurahs}
               keyExtractor={(s) => String(s.number)}
               renderItem={renderSurah}
+              extraData={favoriteSurahs}
               getItemLayout={(_, index) => ({ length: SURAH_ROW_HEIGHT, offset: SURAH_ROW_HEIGHT * index, index })}
               initialScrollIndex={!query && currentSurah > 3 ? currentSurah - 3 : undefined}
               style={[styles.listCard, { backgroundColor: p.page, borderColor: p.chromeBorder }]}
@@ -367,9 +387,16 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
   },
+  surahNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   surahLatin: {
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  surahHeart: {
+    marginLeft: 8,
   },
   surahMetaRow: {
     flexDirection: 'row',

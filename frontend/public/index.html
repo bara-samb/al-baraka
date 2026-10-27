@@ -95,6 +95,25 @@
         animation: splash-spin 0.9s linear infinite;
       }
       @keyframes splash-spin { to { transform: rotate(360deg); } }
+      /* Bandeau « nouvelle version » (voir le script en bas de page). */
+      #update-banner {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 10px);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        max-width: calc(100% - 32px);
+        padding: 10px 18px;
+        border: 1px solid #c9a24a;
+        border-radius: 22px;
+        background: #0b3a2b;
+        color: #f6e7b8;
+        font: 14px system-ui, -apple-system, 'Segoe UI', sans-serif;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+        cursor: pointer;
+      }
+      #update-banner[hidden] { display: none; }
+      #update-banner b { color: #e4c985; }
       /* These styles make the root element full-height */
       #root {
         display: flex;
@@ -129,8 +148,25 @@
           navigator.serviceWorker.register('/sw.js').catch(function (e) {
             console.warn('Service worker non enregistré :', e);
           });
+          // Nouvelle version prête (voir sw.js) : bandeau pour la charger. Pas de rechargement
+          // automatique, qui couperait une récitation en cours.
+          navigator.serviceWorker.addEventListener('message', function (e) {
+            if (e.data === 'update-ready') document.getElementById('update-banner').hidden = false;
+          });
+          // Sur téléphone, l'app installée reste en mémoire : on vérifie à chaque retour au
+          // premier plan (nouvelle version de l'app et du service worker).
+          document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState !== 'visible') return;
+            navigator.serviceWorker.getRegistration().then(function (reg) {
+              if (reg) reg.update().catch(function () {});
+            });
+            if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage('check-update');
+          });
         }
       });
     </script>
+    <button id="update-banner" type="button" hidden onclick="location.reload()">
+      Nouvelle version d'AL BARAKA · <b>Mettre à jour</b>
+    </button>
   </body>
 </html>

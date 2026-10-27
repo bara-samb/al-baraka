@@ -10,6 +10,7 @@ import {
   Animated,
   Modal,
   Pressable,
+  ScrollView,
   NativeScrollEvent,
   NativeSyntheticEvent,
   useWindowDimensions,
@@ -32,7 +33,14 @@ import {
   getAyahAtPosition,
   playSurahLoop,
 } from '../services/audioService';
-import { getFavoriteAyahs, subscribeFavoritesChange, toggleFavoriteVerse } from '../services/favoritesService';
+import {
+  getFavoriteAyahs,
+  getFavoriteSurahs,
+  subscribeFavoritesChange,
+  toggleFavoriteSurah,
+  toggleFavoriteVerse,
+} from '../services/favoritesService';
+import { Surah } from '../types/quran';
 import { getFrenchVerseTranslation } from '../services/quranService';
 import { getEffectiveAudioUrl } from '../services/downloadService';
 import {
@@ -102,6 +110,9 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
   const [bookmark, setBookmark] = useState<MushafBookmark | null>(null);
   // Versets favoris (« sourate:verset »), pour le libellé Ajouter / Retirer des favoris.
   const [favoriteKeys, setFavoriteKeys] = useState<Set<string>>(new Set());
+  // Sourates favorites, et la liste des sourates (le favori garde la fiche complète, comme dans le Lecteur).
+  const [favoriteSurahs, setFavoriteSurahs] = useState<Set<number>>(new Set());
+  const [surahList, setSurahList] = useState<Surah[]>([]);
   const [chromeVisible, setChromeVisible] = useState(true);
   // Hauteur de l'en-tête : la bulle de récitation se place juste en dessous.
   const [topBarHeight, setTopBarHeight] = useState(0);
@@ -146,7 +157,10 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
       getArabicFontSize().then(setFontSize);
       getMushafBookmark().then(setBookmark);
       getSurahList()
-        .then((list) => setRevelationTypes(Object.fromEntries(list.map((s) => [s.number, s.revelationType]))))
+        .then((list) => {
+          setSurahList(list);
+          setRevelationTypes(Object.fromEntries(list.map((s) => [s.number, s.revelationType])));
+        })
         .catch(() => {});
       // Verset demandé depuis l'accueil, sinon la dernière page lue (ou le début de la
       // dernière sourate lue).
@@ -179,8 +193,10 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
   }, [route.params?.at]);
 
   useEffect(() => {
-    const load = () =>
+    const load = () => {
       getFavoriteAyahs().then((list) => setFavoriteKeys(new Set(list.map((i) => `${i.surahNumber}:${i.ayah.numberInSurah}`))));
+      getFavoriteSurahs().then((list) => setFavoriteSurahs(new Set(list.map((s) => s.number))));
+    };
     load();
     return subscribeFavoritesChange(load);
   }, []);
@@ -380,6 +396,17 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
     const translation = favoriteKeys.has(verseKey(v)) ? null : await getFrenchVerseTranslation(v.surah, v.ayah);
     const added = await toggleFavoriteVerse(v.surah, v.ayah, translation);
     showToast(added ? `Ajouté aux favoris · ${surahNameLatin(v.surah)} ${v.ayah}` : 'Retiré des favoris');
+  };
+
+  // Cœur à côté du nom d'une sourate, dans l'index.
+  const handleFavoriteSurah = async (number: number) => {
+    const surah = surahList.find((s) => s.number === number);
+    if (!surah) {
+      showToast('Liste des sourates indisponible');
+      return;
+    }
+    const added = await toggleFavoriteSurah(surah);
+    showToast(added ? `Sourate ajoutée aux favoris · ${surahNameLatin(number)}` : 'Sourate retirée des favoris');
   };
 
   // Marque-page : l'endroit où l'on s'est arrêté (un seul, ruban sur la page).
@@ -610,7 +637,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
               <Text style={[styles.sheetVerse, { color: p.ink }]} numberOfLines={6}>
                 {sheetVerse.text}
               </Text>
-              <View style={styles.sheetActions}>
+              {/* Défile sur les petits écrans : un long verset et toutes les actions n'y tiennent pas. */}
+              <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheetActions} showsVerticalScrollIndicator={false}>
                 <SheetAction icon="play-circle-outline" label="Écouter ce verset" palette={p} onPress={() => runSheetAction((v) => playSingleVerse(v))} />
                 <SheetAction icon="repeat" label="Écouter en boucle" palette={p} onPress={() => runSheetAction((v) => playSingleVerse(v, true))} />
                 <SheetAction
@@ -621,7 +649,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
                 />
                 <SheetAction
                   icon={favoriteKeys.has(verseKey(sheetVerse)) ? 'heart' : 'heart-outline'}
-                  label={favoriteKeys.has(verseKey(sheetVerse)) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  label={favoriteKeys.has(verseKey(sheetVerse)) ? 'Retirer le verset des favoris' : 'Ajouter le verset aux favoris'}
                   palette={p}
                   onPress={() => runSheetAction(handleFavorite)}
                 />
@@ -633,7 +661,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
                 />
                 <SheetAction icon="copy-outline" label="Copier" palette={p} onPress={() => runSheetAction(handleCopy)} />
                 <SheetAction icon="share-social-outline" label="Partager" palette={p} onPress={() => runSheetAction(handleShare)} />
-              </View>
+              </ScrollView>
             </Pressable>
           )}
         </Pressable>
@@ -649,6 +677,8 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
         bookmark={bookmark}
         revelationTypes={revelationTypes}
         palette={p}
+        favoriteSurahs={favoriteSurahs}
+        onToggleFavoriteSurah={handleFavoriteSurah}
         onClose={() => setIndexVisible(false)}
         onSelectPage={(target) => goToPage(target)}
       />
@@ -867,6 +897,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 16,
     paddingBottom: 30,
+    maxHeight: '90%',
+  },
+  sheetScroll: {
+    flexGrow: 0,
   },
   sheetTitle: {
     fontFamily: 'KFGQPC_Warsh',

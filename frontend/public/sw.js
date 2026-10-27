@@ -2,8 +2,10 @@
  * Service worker AL BARAKA (PWA) : rend l'app installable, rapide et utilisable hors ligne.
  *
  *  - Pages : la version en cache s'affiche tout de suite (sans attendre le réseau, même avec
- *    une connexion faible) ; la nouvelle version est récupérée en arrière-plan et sert au
- *    lancement suivant.
+ *    une connexion faible) ; la nouvelle version est récupérée en arrière-plan. Quand elle est
+ *    prête, la page en est prévenue (message « update-ready ») et propose de la charger : sur
+ *    téléphone, l'app installée reste en mémoire et ne serait sinon presque jamais relancée.
+ *    La page demande aussi une vérification à chaque retour au premier plan (« check-update »).
  *  - Fichiers de l'app (bundles hachés, polices, icônes) : cache d'abord. Le bundle de la page
  *    est mis en cache dès l'installation, pour que l'app s'ouvre hors ligne dès la 2e visite.
  *  - Traductions / liste des sourates (api.alquran.cloud) : cache immédiat, mis à jour en
@@ -94,22 +96,41 @@ self.addEventListener('activate', (event) => {
 
 const isAudio = (url) => /\.(mp3|m4a|aac|ogg|wav)$/i.test(url.pathname) || url.pathname.startsWith('/audios/');
 
+/** Bundles d'une page : s'ils changent, une nouvelle version de l'app est en ligne. */
+const bundlesOf = async (response) => pageAssets(await response.clone().text()).join(' ');
+
+/**
+ * Récupère la page en ligne ; si c'est une nouvelle version, la met en cache avec ses fichiers
+ * puis prévient les pages ouvertes, qui proposent de la charger.
+ */
+async function refreshPage() {
+  const cache = await caches.open(APP_CACHE);
+  const cached = await cache.match('/');
+  const response = await fetch('/', { cache: 'no-store' });
+  if (!response.ok) return;
+  if (cached && (await bundlesOf(cached)) === (await bundlesOf(response))) return;
+  await cachePage(cache, response);
+  if (!cached) return;
+  for (const client of await self.clients.matchAll({ type: 'window' })) client.postMessage('update-ready');
+}
+
 /** Page : cache d'abord (ouverture instantanée), mise à jour en arrière-plan. */
 async function navigate(event) {
   const cache = await caches.open(APP_CACHE);
   const cached = await cache.match('/');
-  const update = fetch(event.request)
-    .then(async (response) => {
-      if (response.ok) await cachePage(cache, response.clone());
-      return response;
-    })
-    .catch(() => cached || Response.error());
   if (cached) {
-    event.waitUntil(update.catch(() => {}));
+    event.waitUntil(refreshPage().catch(() => {}));
     return cached;
   }
-  return update;
+  return fetch(event.request).then(async (response) => {
+    if (response.ok) await cachePage(cache, response.clone());
+    return response;
+  });
 }
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'check-update') event.waitUntil(refreshPage().catch(() => {}));
+});
 
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
