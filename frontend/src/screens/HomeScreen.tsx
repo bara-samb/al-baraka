@@ -227,7 +227,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
             Serigne Aboul Baraka Mbacké et permet de les faire écouter à tous. Même un petit don compte.
           </Text>
           <Text style={[styles.sadaqahWolof, { color: colors.accentSub }]}>
-            Jàppaleel AL BARAKA. Aplikasioŋ bi amul fay, amul pub. Sa sarax dina dimbali ngir jàngum
+            Jàppaleel AL BARAKA. Aplikasioŋ bi amul fay, amul pub. Sa ndimbal dina dimbali ngir jàngum
             Serigne Aboul Baraka Mbacké agsi ci ñépp. Sarax su tuuti sax am na njariñ.
           </Text>
           <View style={styles.sadaqahFoot}>
