@@ -398,15 +398,10 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
     showToast(added ? `Ajouté aux favoris · ${surahNameLatin(v.surah)} ${v.ayah}` : 'Retiré des favoris');
   };
 
-  // Cœur à côté du nom d'une sourate, dans l'index.
-  const handleFavoriteSurah = async (number: number) => {
+  // Cœur à côté du nom d'une sourate, dans l'index (qui affiche lui-même le message).
+  const handleFavoriteSurah = async (number: number): Promise<boolean | null> => {
     const surah = surahList.find((s) => s.number === number);
-    if (!surah) {
-      showToast('Liste des sourates indisponible');
-      return;
-    }
-    const added = await toggleFavoriteSurah(surah);
-    showToast(added ? `Sourate ajoutée aux favoris · ${surahNameLatin(number)}` : 'Sourate retirée des favoris');
+    return surah ? toggleFavoriteSurah(surah) : null;
   };
 
   // Marque-page : l'endroit où l'on s'est arrêté (un seul, ruban sur la page).
@@ -598,7 +593,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
             style={reciting && isPlaying ? undefined : { marginLeft: 3 }}
           />
         </TouchableOpacity>
-        <ToolbarButton icon="heart-outline" label="Favoris" color={p.onGreen} onPress={() => navigation.getParent()?.navigate('Favorites')} />
+        <ToolbarButton icon="heart-outline" label="Favoris" color={p.onGreen} onPress={() => navigation.navigate('FavoritesTab')} />
         <ToolbarButton icon="text-outline" label="Affichage" color={p.onGreen} onPress={() => setSettingsOpen(true)} />
       </Animated.View>
 

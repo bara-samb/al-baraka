@@ -1,6 +1,6 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { NavigatorScreenParams } from '@react-navigation/native';
+import { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 
 // Récitation à lancer en ouvrant le Mushaf (depuis les favoris) : le verset seul, une fois ou en
 // boucle, ou toute la sourate, une fois ou en boucle.
@@ -14,7 +14,8 @@ export type MainTabParamList = {
   // la lecture) ; `at` distingue deux demandes identiques.
   MushafTab: { surah: number; ayah: number; at?: number; highlight?: boolean; play?: MushafPlayRequest } | undefined;
   TasbihTab: undefined;
-  SadaqahTab: undefined;
+  // Sourates et versets favoris (la Sadaqah est désormais une bannière de l'accueil).
+  FavoritesTab: undefined;
 };
 
 export type RootStackParamList = {
@@ -27,7 +28,6 @@ export type RootStackParamList = {
     initialVerseNumber?: number;
   };
   Search: undefined;
-  Favorites: undefined;
   // Page d'un verset (verset du jour) : texte, traductions, écoute et partage.
   Verse: { surah: number; ayah: number; title?: string };
 };
@@ -38,7 +38,10 @@ export type HomeTabScreenProps = BottomTabScreenProps<MainTabParamList, 'HomeTab
 export type AudioTabScreenProps = BottomTabScreenProps<MainTabParamList, 'AudioTab'>;
 export type MushafTabScreenProps = BottomTabScreenProps<MainTabParamList, 'MushafTab'>;
 export type TasbihTabScreenProps = BottomTabScreenProps<MainTabParamList, 'TasbihTab'>;
-export type SadaqahTabScreenProps = BottomTabScreenProps<MainTabParamList, 'SadaqahTab'>;
 export type SearchScreenProps = NativeStackScreenProps<RootStackParamList, 'Search'>;
-export type FavoritesScreenProps = NativeStackScreenProps<RootStackParamList, 'Favorites'>;
+// Onglet qui ouvre aussi des pages de la pile (page d'un verset).
+export type FavoritesScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'FavoritesTab'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
 export type VerseScreenProps = NativeStackScreenProps<RootStackParamList, 'Verse'>;

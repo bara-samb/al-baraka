@@ -8,27 +8,14 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { AudioPlayerScreen } from '../screens/AudioPlayerScreen';
 import { MushafScreen } from '../screens/MushafScreen';
 import { TasbihScreen } from '../screens/TasbihScreen';
-import { SadaqahModal } from '../components/SadaqahModal';
+import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { subscribeImmersive } from '../services/immersiveMode';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Composant d'écran pour l'onglet Sadaqah (Ouvre directement la modal)
-const DummySadaqahScreen: React.FC = () => {
-  const { colors } = useTheme();
-  const [modalVisible, setModalVisible] = useState<boolean>(true);
-
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
-      <SadaqahModal visible={modalVisible} onClose={() => setModalVisible(false)} />
-    </View>
-  );
-};
-
 // Custom Bottom Tab Bar Floating Design Elevé (Surelevé en bas)
 const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const { colors } = useTheme();
-  const [sadaqahModalVisible, setSadaqahModalVisible] = useState<boolean>(false);
   // Lecture plein écran du Mushaf : la barre glisse hors de l'écran.
   const [hidden, setHidden] = useState(false);
   const hideAnim = useRef(new Animated.Value(0)).current;
@@ -71,17 +58,12 @@ const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, n
           } else if (route.name === 'TasbihTab') {
             iconName = isFocused ? 'disc' : 'disc-outline';
             label = 'Chapelet';
-          } else if (route.name === 'SadaqahTab') {
+          } else if (route.name === 'FavoritesTab') {
             iconName = isFocused ? 'heart' : 'heart-outline';
-            label = 'Sadaqah';
+            label = 'Favoris';
           }
 
           const onPress = () => {
-            if (route.name === 'SadaqahTab') {
-              setSadaqahModalVisible(true);
-              return;
-            }
-
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,
@@ -135,12 +117,6 @@ const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, n
           );
         })}
       </Animated.View>
-
-      {/* Modal Sadaqah ouverte au clic sur l'onglet Sadaqah */}
-      <SadaqahModal
-        visible={sadaqahModalVisible}
-        onClose={() => setSadaqahModalVisible(false)}
-      />
     </>
   );
 };
@@ -160,7 +136,7 @@ export const BottomTabNavigator: React.FC = () => {
       <Tab.Screen name="AudioTab" component={AudioPlayerScreen} />
       <Tab.Screen name="MushafTab" component={MushafScreen} />
       <Tab.Screen name="TasbihTab" component={TasbihScreen} />
-      <Tab.Screen name="SadaqahTab" component={DummySadaqahScreen} />
+      <Tab.Screen name="FavoritesTab" component={FavoritesScreen} />
     </Tab.Navigator>
   );
 };

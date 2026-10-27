@@ -15,6 +15,7 @@ import {
   toArabicDigits,
 } from '../../services/warshMushafService';
 import { MushafBookmark } from '../../services/bookmarkService';
+import { Toast, useToast } from '../Toast';
 
 export type MushafIndexTab = 'surahs' | 'juz';
 
@@ -26,9 +27,12 @@ interface MushafIndexModalProps {
   bookmark: MushafBookmark | null;
   revelationTypes: Record<number, 'Meccan' | 'Medinan'>;
   palette: MushafPalette;
-  /** Sourates favorites : un cœur à côté du nom les ajoute ou les retire. */
+  /**
+   * Sourates favorites : un cœur à côté du nom les ajoute ou les retire. Le rappel renvoie le
+   * nouvel état (null : échec), annoncé par un message dans l'index.
+   */
   favoriteSurahs: Set<number>;
-  onToggleFavoriteSurah: (surah: number) => void;
+  onToggleFavoriteSurah: (surah: number) => Promise<boolean | null>;
   onClose: () => void;
   onSelectPage: (page: number) => void;
 }
@@ -63,6 +67,13 @@ export const MushafIndexModal: React.FC<MushafIndexModalProps> = ({
   const [query, setQuery] = useState('');
   const [pageInput, setPageInput] = useState('');
   const juzListRef = useRef<FlatList<number>>(null);
+  const toast = useToast();
+
+  const toggleFavorite = async (surah: number) => {
+    const added = await onToggleFavoriteSurah(surah);
+    if (added === null) toast.show('Liste des sourates indisponible');
+    else toast.show(added ? `${surahNameLatin(surah)} ajoutée aux favoris` : `${surahNameLatin(surah)} retirée des favoris`);
+  };
 
   useEffect(() => {
     if (visible) {
@@ -105,7 +116,7 @@ export const MushafIndexModal: React.FC<MushafIndexModalProps> = ({
             <Text style={[styles.surahLatin, { color: p.ink }]}>{item.nameLatin}</Text>
             <TouchableOpacity
               accessibilityLabel={favoriteSurahs.has(item.number) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-              onPress={() => onToggleFavoriteSurah(item.number)}
+              onPress={() => toggleFavorite(item.number)}
               hitSlop={10}
               style={styles.surahHeart}
             >
@@ -272,6 +283,7 @@ export const MushafIndexModal: React.FC<MushafIndexModalProps> = ({
             onScrollToIndexFailed={() => {}}
           />
         )}
+        <Toast text={toast.text} opacity={toast.opacity} background={p.greenDeep} border={p.gold} color={p.onGreen} top={70} />
       </SafeAreaView>
     </Modal>
   );

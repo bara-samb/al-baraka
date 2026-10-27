@@ -8,9 +8,11 @@ import {
   Linking,
   Dimensions,
   ScrollView,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { ORANGE_MONEY_LOGO, WAVE_LOGO } from './PaymentBadges';
 
 interface SadaqahModalProps {
   visible: boolean;
@@ -75,7 +77,7 @@ export const SadaqahModal: React.FC<SadaqahModalProps> = ({ visible, onClose }) 
                 onPress={handleWaveDonation}
                 activeOpacity={0.85}
               >
-                <Ionicons name="wallet-outline" size={22} color="#FFFFFF" style={{ marginRight: 10 }} />
+                <Image source={WAVE_LOGO} style={styles.payLogo} accessibilityLabel="Wave" />
                 <View>
                   <Text style={styles.payBtnTitle}>Faire un don via Wave</Text>
                   <Text style={styles.payBtnSub}>Lien direct Wave (78 017 16 88)</Text>
@@ -88,7 +90,7 @@ export const SadaqahModal: React.FC<SadaqahModalProps> = ({ visible, onClose }) 
                 onPress={handleOrangeMoneyDonation}
                 activeOpacity={0.85}
               >
-                <Ionicons name="phone-portrait-outline" size={22} color="#FFFFFF" style={{ marginRight: 10 }} />
+                <Image source={ORANGE_MONEY_LOGO} style={[styles.payLogo, styles.payLogoLight]} accessibilityLabel="Orange Money" />
                 <View>
                   <Text style={styles.payBtnTitle}>Faire un don via Orange Money</Text>
                   <Text style={styles.payBtnSub}>Code USSD direct (*144#)</Text>
@@ -194,6 +196,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 4,
+  },
+  payLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    marginRight: 12,
+    resizeMode: 'cover',
+  },
+  payLogoLight: {
+    backgroundColor: '#FFFFFF',
+    resizeMode: 'contain',
   },
   waveButton: {
     backgroundColor: '#1DC4FF',

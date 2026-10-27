@@ -1,12 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -17,23 +10,18 @@ import {
   toggleFavoriteSurah,
   toggleFavoriteAyah,
 } from '../services/favoritesService';
+import { surahNameAr, surahNameLatin, surahVerseCount, toArabicDigits } from '../services/warshMushafService';
 import { Surah } from '../types/quran';
-import { SurahCard } from '../components/SurahCard';
+import { Toast, useToast } from '../components/Toast';
 import { FavoritesScreenProps, MushafPlayRequest } from '../navigation/types';
 
+/** Onglet Favoris : sourates et versets enregistrés, à écouter (une fois ou en boucle) dans le Mushaf. */
 export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) => {
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors } = useTheme();
   const [activeTab, setActiveTab] = useState<'surahs' | 'ayahs'>('surahs');
   const [favSurahs, setFavSurahs] = useState<Surah[]>([]);
   const [favAyahs, setFavAyahs] = useState<FavoriteAyahItem[]>([]);
-
-  useEffect(() => {
-    loadFavorites();
-    const unsubscribe = subscribeFavoritesChange(() => {
-      loadFavorites();
-    });
-    return () => unsubscribe();
-  }, []);
+  const toast = useToast();
 
   // Premier chargement : l'onglet Versets s'ouvre d'emblée s'il n'y a que des versets.
   const firstLoadRef = useRef(true);
@@ -47,19 +35,40 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
     firstLoadRef.current = false;
   };
 
-  // Une sourate s'ouvre dans le Mushaf, à son premier verset.
-  const handleSelectSurah = (surah: Surah) => openInMushaf(surah.number, 1);
+  useEffect(() => {
+    loadFavorites();
+    return subscribeFavoritesChange(loadFavorites);
+  }, []);
 
   /**
    * Ouvre le Mushaf au verset (ou au début de la sourate) et, avec `play`, lance la récitation
    * là-bas : le verset récité y est surligné, on écoute et on lit en même temps.
    */
   const openInMushaf = (surah: number, ayah: number, play?: MushafPlayRequest) => {
-    navigation.navigate('MainTabs', {
-      screen: 'MushafTab',
-      params: { surah, ayah, at: Date.now(), highlight: false, play },
-    });
+    navigation.navigate('MushafTab', { surah, ayah, at: Date.now(), highlight: false, play });
   };
+
+  const removeSurah = async (surah: Surah) => {
+    await toggleFavoriteSurah(surah);
+    toast.show(`${surahNameLatin(surah.number)} retirée des favoris`);
+  };
+
+  const removeAyah = async (item: FavoriteAyahItem) => {
+    await toggleFavoriteAyah(item);
+    toast.show(`${surahNameLatin(item.surahNumber)} ${item.ayah.numberInSurah} retiré des favoris`);
+  };
+
+  /** Cœur plein : un toucher retire le favori. */
+  const renderHeart = (label: string, onPress: () => void) => (
+    <TouchableOpacity
+      accessibilityLabel={`Retirer ${label} des favoris`}
+      style={[styles.heartBtn, { backgroundColor: colors.goldTint }]}
+      onPress={onPress}
+      hitSlop={6}
+    >
+      <Ionicons name="heart" size={17} color={colors.gold} />
+    </TouchableOpacity>
+  );
 
   /** Boutons « Écouter » et « En boucle » d'une sourate ou d'un verset. */
   const renderPlayButtons = (onPlay: (loop: boolean) => void) => (
@@ -67,185 +76,118 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
       {([false, true] as const).map((loop) => (
         <TouchableOpacity
           key={String(loop)}
-          style={[styles.playBtn, { borderColor: colors.gold }]}
+          style={[styles.playBtn, loop ? { borderColor: colors.gold } : { backgroundColor: colors.gold, borderColor: colors.gold }]}
           onPress={() => onPlay(loop)}
           activeOpacity={0.8}
         >
-          <Ionicons name={loop ? 'repeat' : 'play'} size={14} color={colors.gold} />
-          <Text style={[styles.playBtnText, { color: colors.gold }]}>{loop ? 'En boucle' : 'Écouter'}</Text>
+          <Ionicons name={loop ? 'repeat' : 'play'} size={14} color={loop ? colors.gold : colors.onGold} />
+          <Text style={[styles.playBtnText, { color: loop ? colors.gold : colors.onGold }]}>{loop ? 'En boucle' : 'Écouter'}</Text>
         </TouchableOpacity>
       ))}
     </View>
   );
 
-  const handleRemoveSurah = async (surah: Surah) => {
-    await toggleFavoriteSurah(surah);
-  };
+  const renderEmpty = (icon: keyof typeof Ionicons.glyphMap, title: string, hint: string) => (
+    <View style={styles.centered}>
+      <View style={[styles.emptyIcon, { backgroundColor: colors.goldTint }]}>
+        <Ionicons name={icon} size={30} color={colors.gold} />
+      </View>
+      <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{title}</Text>
+      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>{hint}</Text>
+    </View>
+  );
 
-  const handleRemoveAyah = async (item: FavoriteAyahItem) => {
-    await toggleFavoriteAyah(item);
-  };
-
-  // Un verset s'ouvre sur sa page : texte entier, traductions, partage.
-  const handleAyahPress = (item: FavoriteAyahItem) => {
-    navigation.navigate('Verse', { surah: item.surahNumber, ayah: item.ayah.numberInSurah, title: 'Verset favori' });
+  const renderTab = (key: 'surahs' | 'ayahs', label: string) => {
+    const active = activeTab === key;
+    return (
+      <TouchableOpacity style={[styles.tabBtn, active && { backgroundColor: colors.gold }]} onPress={() => setActiveTab(key)}>
+        <Text style={[styles.tabBtnText, { color: active ? colors.onGold : colors.textSecondary }]}>{label}</Text>
+      </TouchableOpacity>
+    );
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
-      {/* En-tête */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View style={styles.titleRow}>
-          <TouchableOpacity
-            style={[styles.themeBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border, marginRight: 10 }]}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
-          </TouchableOpacity>
-
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.title, { color: colors.gold }]} numberOfLines={1}>VOS FAVORIS</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-              Sourates et Versets sauvegardés
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.themeBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
-            onPress={toggleTheme}
-          >
-            <Ionicons
-              name={isDark ? 'sunny' : 'moon'}
-              size={20}
-              color={isDark ? colors.gold : colors.textPrimary}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Onglets */}
-        <View style={[styles.tabContainer, { backgroundColor: colors.bgSecondary }]}>
-          <TouchableOpacity
-            style={[
-              styles.tabBtn,
-              { backgroundColor: activeTab === 'surahs' ? colors.gold : 'transparent' },
-            ]}
-            onPress={() => setActiveTab('surahs')}
-          >
-            <Text
-              style={[
-                styles.tabBtnText,
-                { color: activeTab === 'surahs' ? colors.onGold : colors.textSecondary },
-              ]}
-            >
-              Sourates ({favSurahs.length})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.tabBtn,
-              { backgroundColor: activeTab === 'ayahs' ? colors.gold : 'transparent' },
-            ]}
-            onPress={() => setActiveTab('ayahs')}
-          >
-            <Text
-              style={[
-                styles.tabBtnText,
-                { color: activeTab === 'ayahs' ? colors.onGold : colors.textSecondary },
-              ]}
-            >
-              Versets ({favAyahs.length})
-            </Text>
-          </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Mes favoris</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Écoutez-les une fois ou en boucle, en suivant le texte dans le Mushaf
+        </Text>
+        <View style={[styles.tabContainer, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
+          {renderTab('surahs', `Sourates (${favSurahs.length})`)}
+          {renderTab('ayahs', `Versets (${favAyahs.length})`)}
         </View>
       </View>
 
-      {/* Contenu principal */}
       {activeTab === 'surahs' ? (
         <FlatList
           data={favSurahs}
           keyExtractor={(item) => item.number.toString()}
           renderItem={({ item }) => (
-            <View>
-              <View style={styles.cardWrapper}>
-                <View style={{ flex: 1 }}>
-                  <SurahCard surah={item} onPress={handleSelectSurah} />
+            <View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
+              <TouchableOpacity style={styles.surahRow} onPress={() => openInMushaf(item.number, 1)} activeOpacity={0.7}>
+                <View style={[styles.numberBadge, { borderColor: colors.gold }]}>
+                  <Text style={[styles.numberText, { color: colors.gold }]}>{item.number}</Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.removeBtn, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
-                  onPress={() => handleRemoveSurah(item)}
-                >
-                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.surahName, { color: colors.textPrimary }]}>{surahNameLatin(item.number)}</Text>
+                  <Text style={[styles.surahMeta, { color: colors.textSecondary }]}>
+                    {surahVerseCount(item.number)} versets · ouvrir dans le Mushaf
+                  </Text>
+                </View>
+                <Text style={[styles.surahArabic, { color: colors.gold }]}>{surahNameAr(item.number)}</Text>
+              </TouchableOpacity>
+              <View style={styles.cardFooter}>
+                {renderPlayButtons((loop) => openInMushaf(item.number, 1, loop ? 'surahLoop' : 'surah'))}
+                {renderHeart(surahNameLatin(item.number), () => removeSurah(item))}
               </View>
-              <View style={styles.surahPlay}>{renderPlayButtons((loop) => openInMushaf(item.number, 1, loop ? 'surahLoop' : 'surah'))}</View>
             </View>
           )}
           contentContainerStyle={styles.listPadding}
-          ListEmptyComponent={
-            <View style={styles.centered}>
-              <Ionicons name="heart-dislike-outline" size={54} color={colors.border} />
-              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-                Aucune sourate favorite
-              </Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                Dans le Lecteur, touchez le cœur d'une sourate pour l'ajouter ici.
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={renderEmpty(
+            'book-outline',
+            'Aucune sourate favorite',
+            'Touchez le cœur à côté du nom d’une sourate, dans l’Index du Mushaf ou dans le Lecteur.'
+          )}
         />
       ) : (
         <FlatList
           data={favAyahs}
           keyExtractor={(item) => `${item.surahNumber}:${item.ayah.numberInSurah}`}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.ayahCard,
-                {
-                  backgroundColor: colors.bgCard,
-                  borderColor: colors.border,
-                  shadowColor: colors.cardShadow,
-                },
-              ]}
-              onPress={() => handleAyahPress(item)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.ayahHeader}>
-                <Text style={[styles.ayahSurahName, { color: colors.gold }]}>
-                  {item.englishName} · verset {item.ayah.numberInSurah}
+            <View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate('Verse', { surah: item.surahNumber, ayah: item.ayah.numberInSurah, title: 'Verset favori' })
+                }
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.verseRef, { color: colors.gold }]}>
+                  {surahNameLatin(item.surahNumber)} · verset {item.ayah.numberInSurah}
                 </Text>
-                <TouchableOpacity onPress={() => handleRemoveAyah(item)}>
-                  <Ionicons name="close" size={20} color={colors.danger} />
-                </TouchableOpacity>
+                <Text style={[styles.arabicText, { color: colors.textPrimary }]}>
+                  {item.ayah.text.replace(/۞\s*/g, '')} {toArabicDigits(item.ayah.numberInSurah)}
+                </Text>
+                {item.ayah.translation ? (
+                  <Text style={[styles.translationText, { color: colors.textSecondary }]}>{item.ayah.translation}</Text>
+                ) : null}
+              </TouchableOpacity>
+              <View style={styles.cardFooter}>
+                {renderPlayButtons((loop) => openInMushaf(item.surahNumber, item.ayah.numberInSurah, loop ? 'verseLoop' : 'verse'))}
+                {renderHeart(`le verset ${item.ayah.numberInSurah}`, () => removeAyah(item))}
               </View>
-
-              <Text style={[styles.arabicText, { color: colors.textPrimary }]}>
-                {item.ayah.text}
-              </Text>
-              {item.ayah.translation ? (
-                <Text style={[styles.translationText, { color: colors.textSecondary }]}>
-                  {item.ayah.translation}
-                </Text>
-              ) : null}
-              {renderPlayButtons((loop) => openInMushaf(item.surahNumber, item.ayah.numberInSurah, loop ? 'verseLoop' : 'verse'))}
-            </TouchableOpacity>
+            </View>
           )}
           contentContainerStyle={styles.listPadding}
-          ListEmptyComponent={
-            <View style={styles.centered}>
-              <Ionicons name="heart-outline" size={54} color={colors.border} />
-              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
-                Aucun verset favori
-              </Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                Dans le Mushaf, touchez un verset puis « Ajouter aux favoris ».
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={renderEmpty(
+            'bookmark-outline',
+            'Aucun verset favori',
+            'Dans le Mushaf, touchez un verset puis « Ajouter le verset aux favoris ».'
+          )}
         />
       )}
+
+      <Toast text={toast.text} opacity={toast.opacity} background={colors.accentBg} border={colors.gold} color={colors.accentText} top={70} />
     </SafeAreaView>
   );
 };
@@ -260,37 +202,24 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
   },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    letterSpacing: 1.2,
   },
   subtitle: {
     fontSize: 12,
-    marginTop: 2,
-  },
-  themeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 4,
   },
   tabContainer: {
     flexDirection: 'row',
     marginTop: 14,
     borderRadius: 12,
+    borderWidth: 1,
     padding: 4,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 9,
     alignItems: 'center',
     borderRadius: 8,
   },
@@ -302,53 +231,71 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingBottom: 130,
   },
-  cardWrapper: {
+  card: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+  },
+  surahRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: 12,
   },
-  removeBtn: {
+  numberBadge: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    borderWidth: 1,
+    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 4,
+    marginRight: 12,
   },
-  ayahCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    elevation: 2,
+  numberText: {
+    fontWeight: 'bold',
+    fontSize: 14,
   },
-  ayahHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+  surahName: {
+    fontSize: 15,
+    fontWeight: 'bold',
   },
-  ayahSurahName: {
+  surahMeta: {
+    fontSize: 11.5,
+    marginTop: 2,
+  },
+  surahArabic: {
+    fontFamily: 'KFGQPC_Warsh',
+    fontSize: 22,
+    marginLeft: 10,
+    writingDirection: 'rtl',
+  },
+  verseRef: {
     fontSize: 13,
     fontWeight: 'bold',
   },
   arabicText: {
-    fontSize: 20,
-    lineHeight: 38,
+    fontFamily: 'KFGQPC_Warsh',
+    fontSize: 22,
+    lineHeight: 42,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: 6,
   },
   translationText: {
     fontSize: 13,
     lineHeight: 20,
-    marginTop: 8,
+    marginTop: 6,
     fontStyle: 'italic',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
   },
   playRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
   },
   playBtn: {
     flexDirection: 'row',
@@ -363,24 +310,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
   },
-  surahPlay: {
-    paddingHorizontal: 16,
-    marginTop: -4,
-    marginBottom: 10,
+  heartBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   centered: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 40,
-    marginTop: 40,
+    marginTop: 30,
+  },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginTop: 12,
+    marginTop: 14,
   },
   emptySubtitle: {
     fontSize: 13,
+    lineHeight: 19,
     textAlign: 'center',
     marginTop: 6,
   },

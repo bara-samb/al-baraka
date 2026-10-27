@@ -5,7 +5,6 @@ import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { BottomTabNavigator } from './BottomTabNavigator';
 import { SurahScreen } from '../screens/SurahScreen';
 import { SearchScreen } from '../screens/SearchScreen';
-import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { VerseScreen } from '../screens/VerseScreen';
 import { RootStackParamList } from './types';
 import { installWebBackButton } from './webBackButton';
@@ -41,7 +40,6 @@ const NavigationWrapper = () => {
             donc on masque l'en-tête natif pour éviter une double barre de titre. */}
         <Stack.Screen name="Surah" component={SurahScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Verse" component={VerseScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>

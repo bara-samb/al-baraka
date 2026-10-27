@@ -20,6 +20,7 @@ import { getFavoriteSurahs, subscribeFavoritesChange, toggleFavoriteSurah } from
 import { getEffectiveAudioUrl } from '../services/downloadService';
 import { Surah } from '../types/quran';
 import { FullAudioPlayer, RepeatMode } from '../components/FullAudioPlayer';
+import { Toast, useToast } from '../components/Toast';
 import { AudioTabScreenProps } from '../navigation/types';
 
 const reciterPhoto = require('../assets/serigne_abdou_bara.jpg');
@@ -41,6 +42,12 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
     load();
     return subscribeFavoritesChange(load);
   }, []);
+
+  const toast = useToast();
+  const toggleFavorite = async (surah: Surah) => {
+    const added = await toggleFavoriteSurah(surah);
+    toast.show(added ? `${surah.englishName} ajoutée aux favoris` : `${surah.englishName} retirée des favoris`);
+  };
 
   const [audioStatus, setAudioStatus] = useState<SoundStatus>({
     isPlaying: false,
@@ -192,14 +199,14 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
           <Text style={[styles.arabicName, { color: colors.gold }]}>{item.name}</Text>
           <TouchableOpacity
             accessibilityLabel={favorites.has(item.number) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-            onPress={() => toggleFavoriteSurah(item)}
+            onPress={() => toggleFavorite(item)}
             style={styles.playBtnSmall}
             hitSlop={6}
           >
             <Ionicons
               name={favorites.has(item.number) ? 'heart' : 'heart-outline'}
               size={22}
-              color={favorites.has(item.number) ? colors.danger : colors.textSecondary}
+              color={favorites.has(item.number) ? colors.gold : colors.textSecondary}
             />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => handleRowPress(item)} style={styles.playBtnSmall}>
@@ -256,6 +263,8 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
           contentContainerStyle={styles.listContent}
         />
       )}
+
+      <Toast text={toast.text} opacity={toast.opacity} background={colors.accentBg} border={colors.gold} color={colors.accentText} top={70} />
 
       {/* Lecteur flottant récapitulatif bas de page avec vignette photo */}
       {currentSurah && (

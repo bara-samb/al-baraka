@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import {
   getLastListenPosition,
@@ -27,6 +27,7 @@ import { getEffectiveAudioUrl } from '../services/downloadService';
 import { SettingsModal } from '../components/SettingsModal';
 import { ContactModal } from '../components/ContactModal';
 import { SadaqahModal } from '../components/SadaqahModal';
+import { PaymentBadges } from '../components/PaymentBadges';
 
 const reciterPhoto = require('../assets/serigne_abdou_bara.jpg');
 
@@ -210,29 +211,31 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
           </View>
         </TouchableOpacity>
 
-        {/* Raccourci absent de la barre d'onglets */}
+        {/* Sadaqah : bannière en français et en wolof (les favoris ont pris sa place en bas) */}
         <TouchableOpacity
-          style={[styles.rowCard, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
-          onPress={() => navigation.navigate('Favorites')}
-          activeOpacity={0.8}
+          style={[styles.sadaqahCard, { backgroundColor: colors.accentBg, borderColor: colors.gold }]}
+          onPress={() => setIsSadaqahOpen(true)}
+          activeOpacity={0.9}
         >
-          <View style={[styles.rowIcon, { backgroundColor: colors.goldTint }]}>
-            <Ionicons name="heart" size={18} color={colors.gold} />
+          <View style={styles.sadaqahHead}>
+            <MaterialCommunityIcons name="hand-heart" size={20} color={colors.accentText} />
+            <Text style={[styles.sadaqahLabel, { color: colors.accentText }]}>SADAQAH · SARAX</Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.rowTitle, { color: colors.textPrimary }]}>Mes favoris</Text>
-            <Text style={[styles.rowSub, { color: colors.textSecondary }]}>Sourates et versets enregistrés</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        {/* Sadaqah, discret : l'onglet du bas reste l'accès principal */}
-        <TouchableOpacity style={styles.sadaqahLink} onPress={() => setIsSadaqahOpen(true)} activeOpacity={0.7}>
-          <Ionicons name="heart-outline" size={14} color={colors.textSecondary} />
-          <Text style={[styles.sadaqahText, { color: colors.textSecondary }]}>
-            Application gratuite ·{' '}
-            <Text style={{ color: colors.gold, fontWeight: 'bold' }}>Soutenir par une Sadaqah</Text>
+          <Text style={[styles.sadaqahTitle, { color: colors.accentText }]}>Soutenez AL BARAKA</Text>
+          <Text style={[styles.sadaqahBody, { color: colors.accentText }]}>
+            L'application est gratuite et sans publicité. Votre sadaqah paie l'hébergement des récitations de
+            Serigne Aboul Baraka Mbacké et permet de les faire écouter à tous. Même un petit don compte.
           </Text>
+          <Text style={[styles.sadaqahWolof, { color: colors.accentSub }]}>
+            Jàppaleel AL BARAKA. Aplikasioŋ bi amul fay, amul pub. Sa sarax dina dimbali ngir jàngum
+            Serigne Aboul Baraka Mbacké agsi ci ñépp. Sarax su tuuti sax am na njariñ.
+          </Text>
+          <View style={styles.sadaqahFoot}>
+            <PaymentBadges color={colors.accentText} />
+            <View style={[styles.sadaqahBtn, { backgroundColor: colors.gold }]}>
+              <Text style={[styles.sadaqahBtnText, { color: colors.onGold }]}>Faire un don</Text>
+            </View>
+          </View>
         </TouchableOpacity>
       </ScrollView>
 
@@ -377,15 +380,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 12,
-  },
   rowIcon: {
     width: 38,
     height: 38,
@@ -401,16 +395,52 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     marginTop: 1,
   },
-  sadaqahLink: {
+  sadaqahCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+  },
+  sadaqahHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
+    gap: 8,
   },
-  sadaqahText: {
-    fontSize: 12,
-    textAlign: 'center',
-    flexShrink: 1,
+  sadaqahLabel: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 1.5,
+  },
+  sadaqahTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 8,
+  },
+  sadaqahBody: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 6,
+  },
+  sadaqahWolof: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  sadaqahFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 14,
+  },
+  sadaqahBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 18,
+  },
+  sadaqahBtnText: {
+    fontSize: 13,
+    fontWeight: 'bold',
   },
 });
