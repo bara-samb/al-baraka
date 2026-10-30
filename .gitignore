@@ -44,3 +44,6 @@ __pycache__/
 video/out/
 video/cache/
 video/secrets/
+
+*.aab
+*.apk
