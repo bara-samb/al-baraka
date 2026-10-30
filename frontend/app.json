@@ -9,12 +9,14 @@
       "resizeMode": "contain",
       "backgroundColor": "#0B3A2B"
     },
+    "icon": "./public/icons/icon-512.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.barasamb.albaraka"
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./public/icons/icon-maskable-512.png",
         "backgroundColor": "#0B3A2B"
       },
       "package": "com.barasamb.albaraka"
