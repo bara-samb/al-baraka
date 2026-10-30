@@ -27,6 +27,12 @@
       "themeColor": "#0B3A2B",
       "backgroundColor": "#0B3A2B",
       "favicon": "./public/icons/favicon-48.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d2451e50-b32e-430c-976a-7266b83bee04"
+      }
+    },
+    "owner": "bara-samb"
   }
 }
