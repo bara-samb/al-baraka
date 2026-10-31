@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -107,7 +108,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['top', 'left', 'right']}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Mes favoris</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { MainTabParamList } from './types';
 import { useTheme } from '../context/ThemeContext';
@@ -16,6 +17,11 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 // Custom Bottom Tab Bar Floating Design Elevé (Surelevé en bas)
 const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  // Sur les téléphones Android (Samsung, etc.) avec barre de navigation à 3 boutons,
+  // insets.bottom vaut ~48px. On place la barre au-dessus pour ne jamais chevaucher les boutons système.
+  const bottomOffset = Math.max(12, insets.bottom + 8);
+
   // Lecture plein écran du Mushaf : la barre glisse hors de l'écran.
   const [hidden, setHidden] = useState(false);
   const hideAnim = useRef(new Animated.Value(0)).current;
@@ -33,8 +39,9 @@ const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, n
           {
             backgroundColor: colors.tabBarBg,
             borderColor: colors.tabBarBorder,
+            bottom: bottomOffset,
             opacity: hideAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
-            transform: [{ translateY: hideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 100] }) }],
+            transform: [{ translateY: hideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 150] }) }],
           },
         ]}
       >
@@ -110,6 +117,7 @@ const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, n
                   { color: isFocused ? colors.tabActive : colors.tabInactive, fontWeight: isFocused ? 'bold' : '500' },
                 ]}
                 numberOfLines={1}
+                maxFontSizeMultiplier={1.15}
               >
                 {label}
               </Text>
@@ -144,7 +152,6 @@ export const BottomTabNavigator: React.FC = () => {
 const styles = StyleSheet.create({
   tabBarContainer: {
     position: 'absolute',
-    bottom: 12, // Rehaussé légèrement par rapport au bas de l'écran
     left: 12,
     right: 12,
     height: 68,

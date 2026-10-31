@@ -7,9 +7,8 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
-} from 'react-native';
+  StatusBar} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { searchQuranOccurrences } from '../services/quranService';
@@ -72,7 +71,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['top', 'left', 'right']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bgPrimary} />
 
       {/* Header */}

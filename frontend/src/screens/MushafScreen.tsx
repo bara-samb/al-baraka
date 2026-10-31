@@ -5,7 +5,6 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Animated,
   Modal,
@@ -15,8 +14,8 @@ import {
   NativeSyntheticEvent,
   useWindowDimensions,
   Image,
-  Platform,
-} from 'react-native';
+  Platform} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -475,7 +474,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
   const reciting = playbackSurah !== null && recitedAyah !== null;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: p.screen }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: p.screen }]} edges={['top', 'left', 'right']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={p.screen} />
 
       <View style={styles.pagesArea} onLayout={(e) => setPageHeight(e.nativeEvent.layout.height)}>

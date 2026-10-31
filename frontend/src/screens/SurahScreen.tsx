@@ -5,9 +5,8 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-} from 'react-native';
+  StyleSheet} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { showAlert } from '../services/dialog';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -256,7 +255,7 @@ export const SurahScreen: React.FC<SurahScreenProps> = ({ route, navigation }) =
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['top', 'left', 'right']}>
       <View style={[styles.topBar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
         <View style={styles.topRow}>
           <TouchableOpacity

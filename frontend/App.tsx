@@ -3,6 +3,7 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { View, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ensureOfflineTranslation } from './src/services/quranService';
 
 export default function App() {
@@ -29,9 +30,9 @@ export default function App() {
   }
 
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="light" />
       <AppNavigator />
-    </>
+    </SafeAreaProvider>
   );
 }

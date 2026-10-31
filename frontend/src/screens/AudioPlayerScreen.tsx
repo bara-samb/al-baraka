@@ -5,12 +5,11 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   Image,
-  TextInput,
-} from 'react-native';
+  TextInput} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getSurahList } from '../services/quranService';
@@ -222,7 +221,7 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['top', 'left', 'right']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bgPrimary} />
 
       {/* Header */}

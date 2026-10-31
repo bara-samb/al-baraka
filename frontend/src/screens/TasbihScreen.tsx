@@ -4,12 +4,11 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Vibration,
   Platform,
-  useWindowDimensions,
-} from 'react-native';
+  useWindowDimensions} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { showAlert } from '../services/dialog';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -88,7 +87,7 @@ export const TasbihScreen: React.FC = () => {
   const beads = Array.from({ length: 12 }, (_, i) => i);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* En-tête avec basculement de Thème */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>

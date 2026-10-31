@@ -4,11 +4,12 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   Image,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -97,7 +98,7 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['top', 'left', 'right']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bgPrimary} />
 
       {/* Barre de titre */}
@@ -107,9 +108,11 @@ export const HomeScreen: React.FC<any> = ({ navigation }) => {
           style={[styles.photo, { borderColor: colors.gold }]}
           accessibilityLabel="Serigne Aboul Baraka Mbacké"
         />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>AL BARAKA</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+        <View style={{ flex: 1, paddingRight: 4 }}>
+          <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>
+            AL BARAKA
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={2} maxFontSizeMultiplier={1.2}>
             Récitation de Serigne Aboul Baraka Mbacké
           </Text>
         </View>
@@ -255,8 +258,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
-    paddingHorizontal: 18,
-    paddingTop: 14,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? 8 : 12,
     paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
@@ -277,6 +280,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 11,
     marginTop: 2,
+    lineHeight: 14,
   },
   iconTopBtn: {
     width: 36,
@@ -289,7 +293,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 6,
-    paddingBottom: 120,
+    paddingBottom: 160,
     gap: 12,
   },
   dateCard: {
@@ -310,6 +314,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     marginTop: 6,
+    flexWrap: 'wrap',
+    gap: 4,
   },
   hijriText: {
     fontSize: 12,
