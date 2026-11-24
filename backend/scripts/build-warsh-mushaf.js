@@ -40,8 +40,8 @@ function fetchJson(url) {
 const letterCount = (text) => text.replace(/[^ء-يٱ]/g, '').length;
 const hasEighthMark = (text) => text.trim().startsWith('۞') || text.includes(' ۞');
 
-/** Retire le numéro de verset final (chiffres arabes) et normalise أولئك pour placer le point sur le waaw (اؤُلَٰٓئِكَ). */
-const cleanText = (text) => text.replace(/[\s‏]*[٠-٩]+[\s‏]*$/, '').replace(/أُوْ/g, 'اؤُ').trim();
+/** Retire le numéro de verset final (chiffres arabes) et normalise les verbes en و۬ pour placer le point sur le waaw (يُؤَاخِذُ). */
+const cleanText = (text) => text.replace(/[\s‏]*[٠-٩]+[\s‏]*$/, '').replace(/و۬/g, 'ؤ').trim();
 
 /** Indices (dans `verses`) des 16 débuts de huitième d'un Juz'. */
 function eighthStartsOfJuz(verses, idxs) {
