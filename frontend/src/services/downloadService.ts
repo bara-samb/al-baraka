@@ -86,6 +86,47 @@ export const isSurahDownloaded = async (surahNumber: number): Promise<boolean> =
 };
 
 /**
+ * Retourne la liste ordonnée des numéros de sourates téléchargées localement (1 à 114)
+ */
+export const getDownloadedSurahNumbers = async (): Promise<number[]> => {
+  try {
+    if (useWebCache()) {
+      if (typeof caches === 'undefined') return [];
+      const cache = await caches.open(WEB_AUDIO_CACHE);
+      const requests = await cache.keys();
+      const numbers: number[] = [];
+      for (const req of requests) {
+        const match = req.url.match(/(\d{3})\.mp3/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num >= 1 && num <= 114 && !numbers.includes(num)) {
+            numbers.push(num);
+          }
+        }
+      }
+      return numbers.sort((a, b) => a - b);
+    }
+    await ensureDirExists();
+    if (!(FileSystem as any).documentDirectory) return [];
+    const files = await FileSystem.readDirectoryAsync(AUDIO_DIR);
+    const numbers: number[] = [];
+    for (const file of files) {
+      const match = file.match(/^(\d{3})\.mp3$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num >= 1 && num <= 114 && !numbers.includes(num)) {
+          numbers.push(num);
+        }
+      }
+    }
+    return numbers.sort((a, b) => a - b);
+  } catch (e) {
+    console.error('Erreur getDownloadedSurahNumbers:', e);
+    return [];
+  }
+};
+
+/**
  * Retourne l'URI locale si la sourate est téléchargée, sinon l'URL réseau
  */
 export const getEffectiveAudioUrl = async (surahNumber: number): Promise<string> => {

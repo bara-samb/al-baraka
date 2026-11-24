@@ -250,6 +250,37 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
   // recréée directement sur la page visée ; sur le web, défiler vers des pages pas encore
   // affichées laisse le magnétisme du défilement ramener la liste vers les pages chargées.
   const [listKey, setListKey] = useState(0);
+
+  // Gestion du redimensionnement de la fenêtre (PC agrandir / minimiser) :
+  // Évite que le changement de largeur n'interprète l'ancien défilement et change la page où on était.
+  const prevWidthRef = useRef(width);
+  const isResizingRef = useRef(false);
+  const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (prevWidthRef.current !== width) {
+      prevWidthRef.current = width;
+      isResizingRef.current = true;
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
+
+      // Force la FlatList à se reconstruire calée sur la page actuelle avec la nouvelle largeur
+      setListKey((k) => k + 1);
+
+      resizeTimerRef.current = setTimeout(() => {
+        isResizingRef.current = false;
+        if (pageRef.current !== null) {
+          listRef.current?.scrollToIndex({
+            index: indexOfPage(pageRef.current),
+            animated: false,
+          });
+        }
+      }, 150);
+    }
+    return () => {
+      if (resizeTimerRef.current) clearTimeout(resizeTimerRef.current);
+    };
+  }, [width]);
+
   const goToPage = useCallback(
     (target: number, animated = false) => {
       const clamped = Math.max(1, Math.min(MUSHAF_PAGE_COUNT, target));
@@ -267,6 +298,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
   const snapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (isResizingRef.current) return;
       const x = e.nativeEvent.contentOffset.x;
       const index = Math.round(x / width);
       const visible = PAGE_NUMBERS[index];
@@ -274,7 +306,9 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
       if (IS_WEBKIT_WEB) {
         if (snapTimer.current) clearTimeout(snapTimer.current);
         snapTimer.current = setTimeout(() => {
-          if (Math.abs(x - index * width) > 1) listRef.current?.scrollToOffset({ offset: index * width, animated: true });
+          if (!isResizingRef.current && Math.abs(x - index * width) > 1) {
+            listRef.current?.scrollToOffset({ offset: index * width, animated: true });
+          }
         }, SNAP_DELAY_MS);
       }
     },
@@ -490,7 +524,7 @@ export const MushafScreen: React.FC<MushafTabScreenProps> = ({ route, navigation
             pagingEnabled={!IS_WEBKIT_WEB}
             showsHorizontalScrollIndicator={false}
             getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
-            initialScrollIndex={indexOfPage(page)}
+            initialScrollIndex={indexOfPage(pageRef.current ?? page ?? 1)}
             initialNumToRender={1}
             maxToRenderPerBatch={2}
             windowSize={3}

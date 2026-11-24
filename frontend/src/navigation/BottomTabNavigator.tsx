@@ -10,6 +10,7 @@ import { AudioPlayerScreen } from '../screens/AudioPlayerScreen';
 import { MushafScreen } from '../screens/MushafScreen';
 import { TasbihScreen } from '../screens/TasbihScreen';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
+import { DownloadsScreen } from '../screens/DownloadsScreen';
 import { subscribeImmersive } from '../services/immersiveMode';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -68,6 +69,9 @@ const CustomBottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, n
           } else if (route.name === 'FavoritesTab') {
             iconName = isFocused ? 'heart' : 'heart-outline';
             label = 'Favoris';
+          } else if (route.name === 'DownloadsTab') {
+            iconName = isFocused ? 'cloud-download' : 'cloud-download-outline';
+            label = 'Télécharg.';
           }
 
           const onPress = () => {
@@ -145,6 +149,7 @@ export const BottomTabNavigator: React.FC = () => {
       <Tab.Screen name="MushafTab" component={MushafScreen} />
       <Tab.Screen name="TasbihTab" component={TasbihScreen} />
       <Tab.Screen name="FavoritesTab" component={FavoritesScreen} />
+      <Tab.Screen name="DownloadsTab" component={DownloadsScreen} />
     </Tab.Navigator>
   );
 };
@@ -152,14 +157,14 @@ export const BottomTabNavigator: React.FC = () => {
 const styles = StyleSheet.create({
   tabBarContainer: {
     position: 'absolute',
-    left: 12,
-    right: 12,
+    left: 8,
+    right: 8,
     height: 68,
     borderRadius: 26,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -174,15 +179,15 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   iconPill: {
-    width: 36,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 26,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
   },
   tabLabel: {
-    fontSize: 9.5,
+    fontSize: 8.5,
     marginTop: 2,
     textAlign: 'center',
   },

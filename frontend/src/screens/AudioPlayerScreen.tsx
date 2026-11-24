@@ -16,7 +16,13 @@ import { getSurahList } from '../services/quranService';
 import { getCurrentSurahNumber, playAudioFromAyah, subscribeAudioStatus, togglePlayPause, SoundStatus } from '../services/audioService';
 import { getLastListenPosition } from '../services/bookmarkService';
 import { getFavoriteSurahs, subscribeFavoritesChange, toggleFavoriteSurah } from '../services/favoritesService';
-import { getEffectiveAudioUrl } from '../services/downloadService';
+import {
+  getEffectiveAudioUrl,
+  downloadSurahAudio,
+  deleteDownloadedSurah,
+  getDownloadedSurahNumbers,
+  subscribeDownloadChange,
+} from '../services/downloadService';
 import { Surah } from '../types/quran';
 import { FullAudioPlayer, RepeatMode } from '../components/FullAudioPlayer';
 import { Toast, useToast } from '../components/Toast';
@@ -35,6 +41,9 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
   const [searchQuery, setSearchQuery] = useState<string>('');
   // Sourates favorites : le cœur de chaque ligne les ajoute ou les retire.
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
+  // Sourates téléchargées localement pour l'écoute hors-ligne.
+  const [downloadedSurahs, setDownloadedSurahs] = useState<Set<number>>(new Set());
+  const [downloadingSurahs, setDownloadingSurahs] = useState<Map<number, number>>(new Map());
 
   useEffect(() => {
     const load = () => getFavoriteSurahs().then((list) => setFavorites(new Set(list.map((s) => s.number))));
@@ -42,10 +51,44 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
     return subscribeFavoritesChange(load);
   }, []);
 
+  useEffect(() => {
+    const loadDownloads = () =>
+      getDownloadedSurahNumbers().then((nums) => setDownloadedSurahs(new Set(nums)));
+    loadDownloads();
+    return subscribeDownloadChange(loadDownloads);
+  }, []);
+
   const toast = useToast();
   const toggleFavorite = async (surah: Surah) => {
     const added = await toggleFavoriteSurah(surah);
     toast.show(added ? `${surah.englishName} ajoutée aux favoris` : `${surah.englishName} retirée des favoris`);
+  };
+
+  const handleToggleDownload = async (surah: Surah) => {
+    if (downloadingSurahs.has(surah.number)) return;
+    const isDownloaded = downloadedSurahs.has(surah.number);
+    if (isDownloaded) {
+      const removed = await deleteDownloadedSurah(surah.number);
+      if (removed) {
+        toast.show(`${surah.englishName} retirée des téléchargements`);
+      }
+    } else {
+      setDownloadingSurahs((prev) => new Map(prev).set(surah.number, 0));
+      toast.show(`Téléchargement de ${surah.englishName}...`);
+      const success = await downloadSurahAudio(surah.number, (progress) => {
+        setDownloadingSurahs((prev) => new Map(prev).set(surah.number, progress));
+      });
+      setDownloadingSurahs((prev) => {
+        const next = new Map(prev);
+        next.delete(surah.number);
+        return next;
+      });
+      if (success) {
+        toast.show(`${surah.englishName} disponible hors-ligne !`);
+      } else {
+        toast.show(`Erreur lors du téléchargement de ${surah.englishName}`);
+      }
+    }
   };
 
   const [audioStatus, setAudioStatus] = useState<SoundStatus>({
@@ -199,14 +242,34 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
           <TouchableOpacity
             accessibilityLabel={favorites.has(item.number) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
             onPress={() => toggleFavorite(item)}
-            style={styles.playBtnSmall}
+            style={styles.actionBtnSmall}
             hitSlop={6}
           >
             <Ionicons
               name={favorites.has(item.number) ? 'heart' : 'heart-outline'}
-              size={22}
+              size={21}
               color={favorites.has(item.number) ? colors.gold : colors.textSecondary}
             />
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityLabel={
+              downloadedSurahs.has(item.number)
+                ? 'Supprimer des téléchargements'
+                : 'Télécharger la sourate pour écoute hors-ligne'
+            }
+            onPress={() => handleToggleDownload(item)}
+            style={styles.actionBtnSmall}
+            hitSlop={6}
+          >
+            {downloadingSurahs.has(item.number) ? (
+              <ActivityIndicator size="small" color={colors.gold} />
+            ) : (
+              <Ionicons
+                name={downloadedSurahs.has(item.number) ? 'cloud-done' : 'cloud-download-outline'}
+                size={22}
+                color={downloadedSurahs.has(item.number) ? colors.emerald : colors.textSecondary}
+              />
+            )}
           </TouchableOpacity>
           <TouchableOpacity onPress={() => handleRowPress(item)} style={styles.playBtnSmall}>
             <Ionicons
@@ -416,6 +479,11 @@ const styles = StyleSheet.create({
   },
   playBtnSmall: {
     padding: 2,
+    marginLeft: 6,
+  },
+  actionBtnSmall: {
+    padding: 4,
+    marginHorizontal: 3,
   },
   floatingBar: {
     position: 'absolute',

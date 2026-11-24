@@ -16,6 +16,8 @@ export type MainTabParamList = {
   TasbihTab: undefined;
   // Sourates et versets favoris (la Sadaqah est désormais une bannière de l'accueil).
   FavoritesTab: undefined;
+  // Audios téléchargés pour écoute 100% hors-ligne.
+  DownloadsTab: undefined;
 };
 
 export type RootStackParamList = {
@@ -42,6 +44,10 @@ export type SearchScreenProps = NativeStackScreenProps<RootStackParamList, 'Sear
 // Onglet qui ouvre aussi des pages de la pile (page d'un verset).
 export type FavoritesScreenProps = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'FavoritesTab'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
+export type DownloadsTabScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'DownloadsTab'>,
   NativeStackScreenProps<RootStackParamList>
 >;
 export type VerseScreenProps = NativeStackScreenProps<RootStackParamList, 'Verse'>;

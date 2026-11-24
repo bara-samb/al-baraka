@@ -1,0 +1,15 @@
+{
+  "latestVersion": "1.0.1",
+  "versionCode": 6,
+  "minVersion": "1.0.0",
+  "title": "Mise à jour disponible",
+  "message": "Une nouvelle version d'AL BARAKA est disponible sur le Google Play Store !",
+  "releaseNotes": [
+    "Téléchargement des sourates pour l'écoute 100% hors-ligne",
+    "Nouvel onglet Téléchargements dans la barre de navigation",
+    "Correction de l'affichage lors de l'agrandissement/réduction de la fenêtre sur PC",
+    "Améliorations des performances et de la fluidité générale"
+  ],
+  "playStoreUrl": "market://details?id=com.barasamb.albaraka",
+  "webUrl": "https://play.google.com/store/apps/details?id=com.barasamb.albaraka"
+}

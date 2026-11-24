@@ -8,6 +8,7 @@ import { SearchScreen } from '../screens/SearchScreen';
 import { VerseScreen } from '../screens/VerseScreen';
 import { RootStackParamList } from './types';
 import { installWebBackButton } from './webBackButton';
+import { UpdateModal } from '../components/UpdateModal';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -18,31 +19,34 @@ const NavigationWrapper = () => {
   useEffect(() => installWebBackButton(navigationRef), [navigationRef]);
 
   return (
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator
-        initialRouteName="MainTabs"
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: colors.bgPrimary,
-          },
-          headerTintColor: colors.gold,
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-        }}
-      >
-        <Stack.Screen
-          name="MainTabs"
-          component={BottomTabNavigator}
-          options={{ headerShown: false }}
-        />
-        {/* Ces écrans gèrent leur propre en-tête (avec bouton retour) en interne,
-            donc on masque l'en-tête natif pour éviter une double barre de titre. */}
-        <Stack.Screen name="Surah" component={SurahScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Verse" component={VerseScreen} options={{ headerShown: false }} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <>
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator
+          initialRouteName="MainTabs"
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: colors.bgPrimary,
+            },
+            headerTintColor: colors.gold,
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+          }}
+        >
+          <Stack.Screen
+            name="MainTabs"
+            component={BottomTabNavigator}
+            options={{ headerShown: false }}
+          />
+          {/* Ces écrans gèrent leur propre en-tête (avec bouton retour) en interne,
+              donc on masque l'en-tête natif pour éviter une double barre de titre. */}
+          <Stack.Screen name="Surah" component={SurahScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Verse" component={VerseScreen} options={{ headerShown: false }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+      <UpdateModal />
+    </>
   );
 };
 
