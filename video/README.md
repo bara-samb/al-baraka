@@ -92,7 +92,26 @@ où elle s'était arrêtée (`out/youtube-uploaded.json`) et continue le calendr
 > En attendant : envoyez les vidéos depuis **YouTube Studio** (jusqu'à 15 à la fois), en
 > copiant titre et description depuis les `.json`, et programmez-les dans Studio.
 
-## 3. Publier sur TikTok
+## 3. Publier sur TikTok automatiquement
+
+Le script `upload-tiktok.js` pilote Google Chrome via Puppeteer pour téléverser et programmer les vidéos de `out/calendrier-tiktok.csv` directement sur TikTok Studio.
+
+### Une seule fois : connexion au compte
+```bash
+node upload-tiktok.js setup
+```
+Une fenêtre Chrome s'ouvre : connectez-vous à votre compte TikTok (en cochant "Se souvenir de moi"). Vos identifiants restent enregistrés de manière isolée dans `secrets/tiktok-chrome-profile/`.
+
+### Lancer la publication
+```bash
+node upload-tiktok.js --limit 2         # envoie les 2 prochains clips
+node upload-tiktok.js --dry-run         # teste le remplissage sans publier
+publier-tiktok.cmd                      # lance l'envoi quotidien (automatisable dans Windows)
+```
+
+L'avancement est noté dans `out/tiktok-uploaded.json` pour éviter tout doublon.
+
+### Ancienne méthode manuelle (calendrier CSV)
 
 TikTok n'autorise la publication automatique qu'aux applications validées par TikTok, et une
 application non validée ne peut publier qu'en privé. La méthode la plus simple :

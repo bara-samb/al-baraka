@@ -6,6 +6,7 @@
   "scripts": {
     "render": "node render.js",
     "upload:youtube": "node upload-youtube.js",
+    "upload:tiktok": "node upload-tiktok.js",
     "plan": "node plan.js"
   },
   "dependencies": {

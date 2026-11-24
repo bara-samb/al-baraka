@@ -18,7 +18,7 @@ const REMOTE_VERSION_URL = 'https://al-baraka-app.pages.dev/version.json';
 
 // Version actuelle de l'application
 export const CURRENT_APP_VERSION = Constants.expoConfig?.version || '1.0.0';
-export const CURRENT_VERSION_CODE = (Constants.expoConfig as any)?.android?.versionCode || 5;
+export const CURRENT_VERSION_CODE = (Constants.expoConfig as any)?.android?.versionCode || 7;
 
 /**
  * Compare deux chaînes de version semver (ex: "1.0.1" vs "1.0.0")
