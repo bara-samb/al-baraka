@@ -229,25 +229,29 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
               </Text>
             )}
           </View>
-          <View>
-            <Text style={[styles.surahName, { color: colors.textPrimary }]}>{item.englishName}</Text>
-            <Text style={[styles.surahMeta, { color: colors.textSecondary }]}>
+          <View style={styles.nameBlock}>
+            <Text style={[styles.surahName, { color: colors.textPrimary }]} numberOfLines={1} ellipsizeMode="tail">
+              {item.englishName}
+            </Text>
+            <Text style={[styles.surahMeta, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
               {item.numberOfAyahs} Versets • {item.revelationType === 'Meccan' ? 'Mecquoise' : 'Médinoise'}
             </Text>
           </View>
         </View>
 
         <View style={styles.itemRight}>
-          <Text style={[styles.arabicName, { color: colors.gold }]}>{item.name}</Text>
+          <Text style={[styles.arabicName, { color: colors.gold }]} numberOfLines={1} ellipsizeMode="tail">
+            {item.name}
+          </Text>
           <TouchableOpacity
             accessibilityLabel={favorites.has(item.number) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
             onPress={() => toggleFavorite(item)}
             style={styles.actionBtnSmall}
-            hitSlop={6}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
           >
             <Ionicons
               name={favorites.has(item.number) ? 'heart' : 'heart-outline'}
-              size={21}
+              size={20}
               color={favorites.has(item.number) ? colors.gold : colors.textSecondary}
             />
           </TouchableOpacity>
@@ -259,14 +263,14 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
             }
             onPress={() => handleToggleDownload(item)}
             style={styles.actionBtnSmall}
-            hitSlop={6}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
           >
             {downloadingSurahs.has(item.number) ? (
               <ActivityIndicator size="small" color={colors.gold} />
             ) : (
               <Ionicons
                 name={downloadedSurahs.has(item.number) ? 'cloud-done' : 'cloud-download-outline'}
-                size={22}
+                size={21}
                 color={downloadedSurahs.has(item.number) ? colors.emerald : colors.textSecondary}
               />
             )}
@@ -274,7 +278,7 @@ export const AudioPlayerScreen: React.FC<AudioTabScreenProps> = ({ route, naviga
           <TouchableOpacity onPress={() => handleRowPress(item)} style={styles.playBtnSmall}>
             <Ionicons
               name={isPlayingThis ? 'pause-circle' : 'play-circle'}
-              size={32}
+              size={30}
               color={colors.gold}
             />
           </TouchableOpacity>
@@ -436,7 +440,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 10,
@@ -445,21 +450,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginRight: 6,
+    minWidth: 0,
   },
   numberBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
+    flexShrink: 0,
   },
   numberText: {
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 12,
+  },
+  nameBlock: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
   },
   surahName: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: 'bold',
   },
   surahMeta: {
@@ -469,21 +482,23 @@ const styles = StyleSheet.create({
   itemRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
   },
   arabicName: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: 'bold',
-    marginRight: 10,
+    marginRight: 6,
+    maxWidth: 68,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   playBtnSmall: {
     padding: 2,
-    marginLeft: 6,
+    marginLeft: 3,
   },
   actionBtnSmall: {
-    padding: 4,
-    marginHorizontal: 3,
+    padding: 3,
+    marginHorizontal: 1,
   },
   floatingBar: {
     position: 'absolute',

@@ -38,7 +38,9 @@ export const MUSHAF_VERSES: MushafVerse[] = (() => {
     const next = DATA.eighths[eighth];
     const opensEighth = !!next && next[0] === surah && next[1] === ayah;
     if (opensEighth) eighth++;
-    return { surah, ayah, page, juz, eighth, opensEighth, text };
+    // Normalisation Warsh maghrébin : le point/hamza de أولئك se place sur le waaw (اؤُلَٰٓئِكَ) et non sous l'alif.
+    const normalizedText = text.replace(/أُوْ/g, 'اؤُ');
+    return { surah, ayah, page, juz, eighth, opensEighth, text: normalizedText };
   });
 })();
 
